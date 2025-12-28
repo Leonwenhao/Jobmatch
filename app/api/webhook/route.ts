@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { constructWebhookEvent } from '@/lib/stripe';
 import { sessionStorage } from '@/lib/storage';
 import { searchJobs } from '@/lib/adzuna';
+import { sendJobEmail } from '@/lib/resend';
 import Stripe from 'stripe';
 
 /**
@@ -81,13 +82,36 @@ export async function POST(request: NextRequest) {
 
         console.log(`Found ${jobs.length} jobs for session ${sessionId}`);
 
-        // Update session with jobs and mark complete
+        // Update session with jobs
         session.jobs = jobs;
-        session.status = 'complete';
         sessionStorage.update(sessionId, session);
 
-        // TODO: In Milestone 5, send email with remaining 20 jobs
-        // For now, we just store all 25 jobs in the session
+        // Send email with remaining 20 jobs (5 shown on results page, 20 via email)
+        if (jobs.length > 5 && session.email) {
+          const emailJobs = jobs.slice(5); // Get jobs 6-25
+          console.log(`Sending ${emailJobs.length} jobs via email to ${session.email}`);
+
+          try {
+            const emailResult = await sendJobEmail(session.email, emailJobs);
+
+            if (emailResult.success) {
+              console.log(`Email sent successfully to ${session.email}, messageId: ${emailResult.messageId}`);
+            } else {
+              console.error(`Email delivery failed to ${session.email}:`, emailResult.error);
+              // Don't fail the whole request if email fails
+              // User still gets the 5 jobs on the results page
+            }
+          } catch (emailError) {
+            console.error(`Email sending error:`, emailError);
+            // Don't fail the whole request if email fails
+          }
+        } else if (jobs.length <= 5) {
+          console.log(`Only ${jobs.length} jobs found, no email needed`);
+        }
+
+        // Mark session as complete
+        session.status = 'complete';
+        sessionStorage.update(sessionId, session);
 
         console.log(`Session ${sessionId} processing complete`);
 
