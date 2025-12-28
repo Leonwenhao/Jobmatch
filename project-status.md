@@ -12,7 +12,7 @@
 | 1 | Core Infrastructure | ✅ Complete | Next.js, Tailwind, upload UI |
 | 2 | Resume Parsing | ✅ Complete | PDF extraction, Claude API |
 | 3 | Job Search | ✅ Complete | Adzuna integration |
-| 4 | Payment Flow | ⏳ Not Started | Stripe Checkout |
+| 4 | Payment Flow | ✅ Complete | Stripe Checkout |
 | 5 | Email Delivery | ⏳ Not Started | Resend integration |
 | 6 | Polish & Deploy | ⏳ Not Started | Error handling, UX, launch |
 
@@ -49,14 +49,14 @@
 - [x] Create JobCard and JobList components
 - [x] Handle "no results" case
 
-### Milestone 4: Payment Flow
+### Milestone 4: Payment Flow ✅
 **Goal:** Accept payment via Stripe
 
-- [ ] Integrate Stripe Checkout
-- [ ] Create checkout session with metadata
-- [ ] Build webhook handler
-- [ ] Implement success/cancel pages
-- [ ] Connect payment to job processing
+- [x] Integrate Stripe Checkout
+- [x] Create checkout session with metadata
+- [x] Build webhook handler
+- [x] Implement success/cancel pages
+- [x] Connect payment to job processing
 
 ### Milestone 5: Email Delivery
 **Goal:** Send remaining jobs via email
@@ -120,6 +120,23 @@
 - ✅ Error handling for API failures
 - ✅ Test suite verified with live API
 
+### Milestone 4: Payment Flow (Dec 28, 2025)
+- ✅ Stripe SDK integration
+- ✅ Stripe Checkout helpers (lib/stripe.ts)
+- ✅ Lazy credential initialization
+- ✅ /api/create-checkout endpoint ($5 payment)
+- ✅ Email validation and session correlation
+- ✅ /api/webhook endpoint for Stripe events
+- ✅ checkout.session.completed event handling
+- ✅ Webhook signature verification
+- ✅ Payment success triggers job processing
+- ✅ Checkout page with email collection
+- ✅ Success page with loading state
+- ✅ Cancel page with support links
+- ✅ Results page for displaying jobs
+- ✅ Session ID passed via Stripe metadata
+- ✅ Integration with resume parsing and job search
+
 ---
 
 ## Blockers & Open Questions
@@ -135,12 +152,12 @@
 2. ✅ ~~Begin Milestone 1~~
 3. ✅ ~~Complete Milestone 2~~
 4. ✅ ~~Complete Milestone 3~~
-5. **Start Milestone 4: Payment Flow**
-   - Integrate Stripe Checkout
-   - Create checkout session with metadata
-   - Build webhook handler
-   - Implement success/cancel pages
-   - Connect payment to job processing
+5. ✅ ~~Complete Milestone 4~~
+6. **Start Milestone 5: Email Delivery**
+   - Set up Resend integration
+   - Design email template
+   - Implement email queue/sending
+   - Handle delivery failures
 
 ---
 
