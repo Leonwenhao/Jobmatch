@@ -1,12 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
-// Force dynamic rendering (no static generation)
-export const dynamic = 'force-dynamic';
-
-export default function SuccessPage() {
+function SuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(true);
@@ -21,25 +18,34 @@ export default function SuccessPage() {
       return;
     }
 
-    // Poll for results to be ready
-    const checkResults = async () => {
+    // Extract our session ID from Stripe metadata
+    // In the webhook, we stored our sessionId in the Stripe checkout metadata
+    // For now, we'll redirect to results and let it poll for completion
+    const redirectToResults = async () => {
       try {
-        // In a real implementation, we'd poll the backend to check if processing is complete
-        // For now, we'll wait a few seconds and then redirect
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        // Wait a moment for webhook processing to start
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // Redirect to results page
-        // Note: We'll need to map the Stripe checkout session ID back to our session ID
-        // For now, this is a simplified version
-        router.push(`/results/${checkoutSessionId}`);
+        // The Stripe checkout session ID isn't the same as our session ID
+        // We need to get our session ID from the Stripe session metadata
+        // For now, we'll use a simple approach: store it in localStorage during checkout
+        const sessionId = localStorage.getItem('jobmatch_session_id');
+
+        if (sessionId) {
+          router.push(`/results/${sessionId}`);
+        } else {
+          // Fallback: just redirect and let the user see an error
+          setError('Could not find your session. Please check your email for results or contact support.');
+          setIsProcessing(false);
+        }
       } catch (err) {
-        console.error('Error checking results:', err);
+        console.error('Error redirecting:', err);
         setError('Failed to retrieve results');
         setIsProcessing(false);
       }
     };
 
-    checkResults();
+    redirectToResults();
   }, [searchParams, router]);
 
   if (error) {
@@ -51,12 +57,20 @@ export default function SuccessPage() {
             Something Went Wrong
           </h1>
           <p className="text-gray-600 mb-6">{error}</p>
-          <a
-            href="/"
-            className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors"
-          >
-            Return Home
-          </a>
+          <div className="space-y-3">
+            <a
+              href="/"
+              className="block w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors"
+            >
+              Return Home
+            </a>
+            <a
+              href="mailto:support@jobmatch.com"
+              className="block w-full px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-md transition-colors"
+            >
+              Contact Support
+            </a>
+          </div>
         </div>
       </div>
     );
@@ -79,5 +93,17 @@ export default function SuccessPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <SuccessContent />
+    </Suspense>
   );
 }

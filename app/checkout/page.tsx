@@ -1,12 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
-// Force dynamic rendering (no static generation)
-export const dynamic = 'force-dynamic';
-
-export default function CheckoutPage() {
+function CheckoutContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const sessionId = searchParams.get('sessionId');
@@ -55,6 +52,9 @@ export default function CheckoutPage() {
       }
 
       const { checkoutUrl } = await response.json();
+
+      // Store session ID for retrieval after Stripe redirects back
+      localStorage.setItem('jobmatch_session_id', sessionId);
 
       // Redirect to Stripe Checkout
       window.location.href = checkoutUrl;
@@ -152,5 +152,17 @@ export default function CheckoutPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <CheckoutContent />
+    </Suspense>
   );
 }
