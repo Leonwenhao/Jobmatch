@@ -1,7 +1,7 @@
 # Project Status: JobMatch
 
 ## Current Phase
-**Phase 2: Setup** — Preparing to begin development
+**Phase 3: Active Development** — Building JobMatch V1
 
 ---
 
@@ -9,7 +9,7 @@
 
 | # | Milestone | Status | Notes |
 |---|-----------|--------|-------|
-| 1 | Core Infrastructure | ⏳ Not Started | Next.js, Tailwind, upload UI |
+| 1 | Core Infrastructure | ✅ Complete | Next.js, Tailwind, upload UI |
 | 2 | Resume Parsing | ⏳ Not Started | PDF extraction, Claude API |
 | 3 | Job Search | ⏳ Not Started | Adzuna integration |
 | 4 | Payment Flow | ⏳ Not Started | Stripe Checkout |
@@ -20,16 +20,16 @@
 
 ## Milestone Details
 
-### Milestone 1: Core Infrastructure
+### Milestone 1: Core Infrastructure ✅
 **Goal:** Project skeleton with working upload UI
 
-- [ ] Initialize Next.js project with TypeScript
-- [ ] Configure Tailwind CSS
-- [ ] Create homepage layout
-- [ ] Build drag-and-drop upload component
-- [ ] Create `/api/upload` endpoint
-- [ ] Set up environment variables structure
-- [ ] Create basic file structure per engineering design
+- [x] Initialize Next.js project with TypeScript
+- [x] Configure Tailwind CSS
+- [x] Create homepage layout
+- [x] Build drag-and-drop upload component
+- [x] Create `/api/upload` endpoint
+- [x] Set up environment variables structure
+- [x] Create basic file structure per engineering design
 
 ### Milestone 2: Resume Parsing
 **Goal:** Extract structured data from uploaded resumes
@@ -81,22 +81,38 @@
 ---
 
 ## Completed Work
-*Nothing yet—development starting soon*
+
+### Milestone 1: Core Infrastructure (Dec 28, 2025)
+- ✅ Next.js 14 project initialized with TypeScript
+- ✅ Tailwind CSS configured with custom theme
+- ✅ File structure created (app/, components/, lib/, emails/, public/)
+- ✅ Homepage with hero section and "How It Works"
+- ✅ Drag-and-drop resume upload component with validation
+- ✅ `/api/upload` endpoint with PDF parsing (pdf-parse)
+- ✅ In-memory session storage (lib/storage.ts)
+- ✅ TypeScript types defined (lib/types.ts)
+- ✅ Environment variables structure (.env.example)
+- ✅ Build successful, dev server running
 
 ---
 
 ## Blockers & Open Questions
 
 1. **Product name:** "JobMatch" is a placeholder. Final name TBD.
-2. **Temporary storage:** Vercel Blob vs in-memory? Decide in Milestone 1.
+2. **Temporary storage:** ✅ Decided: Using in-memory Map for V1 (simple, stateless)
 3. **OCR for scanned PDFs:** Defer to post-V1 or include?
 
 ---
 
 ## Next Actions
-1. Complete Phase 2 setup (GitHub repo, MCP servers, etc.)
-2. Begin Milestone 1 with Claude Code
+1. ✅ ~~Complete Phase 2 setup~~
+2. ✅ ~~Begin Milestone 1~~
+3. **Start Milestone 2: Resume Parsing**
+   - Implement PDF text extraction (already done in /api/upload)
+   - Set up Claude API integration
+   - Write and test parsing prompt
+   - Handle edge cases
 
 ---
 
-*Last Updated: [Date]*
+*Last Updated: December 28, 2025*
