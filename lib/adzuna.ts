@@ -120,16 +120,33 @@ export async function searchJobs(
   const what = buildSearchQuery(parsedResume);
   const where = extractLocation(parsedResume);
 
+  console.log('=== Adzuna Job Search ===');
+  console.log('Parsed Resume:', JSON.stringify(parsedResume, null, 2));
+  console.log('Search Query (what):', what);
+  console.log('Search Location (where):', where);
+
   // Construct API URL with query parameters
   const params = new URLSearchParams({
     app_id: appId,
     app_key: appKey,
-    what: what,
-    where: where,
     results_per_page: maxResults.toString(),
   });
 
-  // Add job type filters if specified
+  // Only add 'what' if we have search terms
+  if (what && what.trim().length > 0) {
+    params.append('what', what);
+  } else {
+    console.warn('No search terms found in resume! Searching for general jobs...');
+    params.append('what', 'job'); // Fallback to very broad search
+  }
+
+  // Only add 'where' if we have a specific location
+  if (where && where !== 'United States') {
+    params.append('where', where);
+  }
+  // If location is just "United States", don't filter by location - search nationwide
+
+  // Add job type filters if specified (but don't be too restrictive)
   if (parsedResume.jobTypes && parsedResume.jobTypes.includes('full-time')) {
     params.append('full_time', '1');
   }
@@ -138,6 +155,7 @@ export async function searchJobs(
   }
 
   const url = `${ADZUNA_BASE_URL}?${params.toString()}`;
+  console.log('Adzuna API URL:', url.replace(appKey, 'REDACTED'));
 
   try {
     const response = await fetch(url, {
@@ -149,16 +167,51 @@ export async function searchJobs(
 
     if (!response.ok) {
       const errorText = await response.text();
+      console.error('Adzuna API Error Response:', errorText);
       throw new Error(`Adzuna API error: ${response.status} - ${errorText}`);
     }
 
     const data: AdzunaResponse = await response.json();
+    console.log(`Adzuna returned ${data.results.length} jobs (total available: ${data.count})`);
+
+    // If no results, try a broader search
+    if (data.results.length === 0) {
+      console.warn('No jobs found with specific criteria. Trying broader search...');
+
+      // Try again with just job titles (no skills)
+      if (parsedResume.jobTitles && parsedResume.jobTitles.length > 0) {
+        const broaderParams = new URLSearchParams({
+          app_id: appId,
+          app_key: appKey,
+          what: parsedResume.jobTitles[0], // Just use first job title
+          results_per_page: maxResults.toString(),
+        });
+
+        const broaderUrl = `${ADZUNA_BASE_URL}?${broaderParams.toString()}`;
+        console.log('Trying broader search:', broaderUrl.replace(appKey, 'REDACTED'));
+
+        const broaderResponse = await fetch(broaderUrl, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' },
+        });
+
+        if (broaderResponse.ok) {
+          const broaderData: AdzunaResponse = await broaderResponse.json();
+          console.log(`Broader search returned ${broaderData.results.length} jobs`);
+
+          if (broaderData.results.length > 0) {
+            return broaderData.results.map(convertAdzunaJob);
+          }
+        }
+      }
+    }
 
     // Convert Adzuna jobs to our Job type
     const jobs = data.results.map(convertAdzunaJob);
 
     return jobs;
   } catch (error) {
+    console.error('Adzuna API Error:', error);
     if (error instanceof Error) {
       throw new Error(`Failed to fetch jobs from Adzuna: ${error.message}`);
     }

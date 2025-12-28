@@ -2,6 +2,69 @@
 
 ## Post-Deployment Bug Fixes
 
+### Issue #6: No Jobs Found - Empty Adzuna Results
+**Date:** 2025-12-28
+**Severity:** Critical (P0)
+**Status:** ✅ Fixed
+
+#### Problem:
+After successful upload and payment, results page shows:
+```
+No Matches Found
+We couldn't find jobs matching your resume right now.
+```
+
+#### Root Cause:
+1. **Search query too specific** - Combining all job titles + all skills creates very narrow queries that return 0 results
+2. **Location filtering too strict** - Some locations don't match Adzuna's database
+3. **No fallback** - If first search fails, no retry with broader criteria
+4. **No logging** - Can't see what queries are being sent to Adzuna
+
+#### Solution:
+**Improved Adzuna search with fallback logic:**
+
+1. **Added comprehensive logging:**
+   - Logs parsed resume data
+   - Logs search query and location
+   - Logs API URL (with credentials redacted)
+   - Logs number of results returned
+
+2. **Smarter location handling:**
+   - Only filter by location if specific city/state provided
+   - If location is just "United States", search nationwide (don't filter)
+
+3. **Fallback search:**
+   - If initial search returns 0 results
+   - Try again with just the first job title (no skills)
+   - This casts a wider net while still being relevant
+
+4. **Empty query handling:**
+   - If no search terms found, use "job" as fallback
+   - Prevents API errors from empty queries
+
+#### Debugging:
+Now you can see in Vercel logs exactly what's being searched:
+```
+=== Adzuna Job Search ===
+Parsed Resume: {...}
+Search Query (what): Software Engineer JavaScript Python
+Search Location (where): New York, NY
+Adzuna returned 0 jobs (total available: 0)
+Trying broader search...
+Broader search returned 125 jobs
+```
+
+#### Files Modified:
+- `lib/adzuna.ts` - Added logging, fallback, and smarter filtering
+
+#### Next Steps for User:
+1. Check Vercel function logs after payment
+2. Look for "=== Adzuna Job Search ===" logs
+3. See what query was sent and results returned
+4. If still no results, the parsed resume data might be empty
+
+---
+
 ### Issue #5: Checkout Failed - "Failed to create checkout session"
 **Date:** 2025-12-28
 **Severity:** Critical (P0)
