@@ -117,6 +117,128 @@ ${resumeText}`;
 }
 
 /**
+ * Parse resume PDF using Claude API with PDF support
+ * Sends the PDF directly to Claude which can extract and analyze the content
+ * This works in serverless environments (unlike pdf-parse)
+ */
+export async function parseResumePDF(base64PDF: string): Promise<ParsedResume> {
+  if (!base64PDF || base64PDF.length === 0) {
+    throw new Error('PDF data is empty');
+  }
+
+  const anthropic = getAnthropicClient();
+
+  const prompt = `You are a resume parser. Extract the following information from this resume PDF:
+
+1. Job titles/roles the person has held
+2. Skills (technical and soft)
+3. Years of experience (total)
+4. Current location or stated location preference
+5. Industries they've worked in
+6. Education level and field
+7. Job type preferences (if stated): full-time, part-time, contract, remote
+
+Return ONLY a JSON object with this exact structure:
+{
+  "jobTitles": ["Title 1", "Title 2"],
+  "skills": ["Skill 1", "Skill 2"],
+  "yearsExperience": 5,
+  "location": "City, State",
+  "industries": ["Industry 1"],
+  "education": "Bachelor's in X",
+  "jobTypes": ["full-time", "remote"]
+}
+
+If information is not available, use null or empty array. Do not include any other text besides the JSON.`;
+
+  try {
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2048,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'document',
+              source: {
+                type: 'base64',
+                media_type: 'application/pdf',
+                data: base64PDF,
+              },
+            },
+            {
+              type: 'text',
+              text: prompt,
+            },
+          ],
+        },
+      ],
+    });
+
+    // Extract the text content from the response
+    const content = message.content[0];
+    if (content.type !== 'text') {
+      throw new Error('Unexpected response type from Claude API');
+    }
+
+    const responseText = content.text;
+
+    // Parse JSON from the response
+    let jsonText = responseText;
+    const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/);
+    if (jsonMatch) {
+      jsonText = jsonMatch[1];
+    } else {
+      // Try to find JSON object in the response
+      const objectMatch = responseText.match(/\{[\s\S]*\}/);
+      if (objectMatch) {
+        jsonText = objectMatch[0];
+      }
+    }
+
+    const parsed = JSON.parse(jsonText) as ParsedResume;
+
+    // Validate the parsed result has the expected structure
+    if (typeof parsed !== 'object') {
+      throw new Error('Parsed result is not an object');
+    }
+
+    // Ensure all required fields exist with proper defaults
+    const validatedResult: ParsedResume = {
+      jobTitles: Array.isArray(parsed.jobTitles) ? parsed.jobTitles : [],
+      skills: Array.isArray(parsed.skills) ? parsed.skills : [],
+      yearsExperience: typeof parsed.yearsExperience === 'number' ? parsed.yearsExperience : null,
+      location: typeof parsed.location === 'string' ? parsed.location : null,
+      industries: Array.isArray(parsed.industries) ? parsed.industries : [],
+      education: typeof parsed.education === 'string' ? parsed.education : null,
+      jobTypes: Array.isArray(parsed.jobTypes) ? parsed.jobTypes : [],
+    };
+
+    // Basic validation: ensure we got some useful data
+    if (
+      validatedResult.jobTitles.length === 0 &&
+      validatedResult.skills.length === 0 &&
+      !validatedResult.yearsExperience
+    ) {
+      throw new Error('We couldn\'t find enough information in your resume. Please ensure it contains your work history, skills, and experience.');
+    }
+
+    return validatedResult;
+  } catch (error) {
+    if (error instanceof Anthropic.APIError) {
+      console.error('Claude API Error:', error.status, error.message);
+      throw new Error(`Claude API error: ${error.message}`);
+    }
+    if (error instanceof SyntaxError) {
+      console.error('JSON Parse Error:', error.message);
+      throw new Error('Failed to parse response from Claude. Please try again.');
+    }
+    throw error;
+  }
+}
+
+/**
  * Validate that a resume has sufficient content for parsing
  */
 export function validateResumeText(text: string): { valid: boolean; error?: string } {
