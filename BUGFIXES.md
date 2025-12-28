@@ -2,6 +2,65 @@
 
 ## Post-Deployment Bug Fixes
 
+### Issue #5: Checkout Failed - "Failed to create checkout session"
+**Date:** 2025-12-28
+**Severity:** Critical (P0)
+**Status:** ✅ Fixed
+
+#### Problem:
+After uploading resume successfully, clicking "Pay $5 & Find My Jobs" shows error:
+```
+Failed to create checkout session
+```
+
+#### Root Cause:
+Generic error handling was hiding the actual problem. Could be:
+1. Missing `STRIPE_SECRET_KEY` in Vercel environment variables
+2. Missing `NEXT_PUBLIC_APP_URL` in Vercel
+3. Stripe API authentication failure
+4. Invalid Stripe API key (test vs live mode mismatch)
+
+#### Solution:
+**Improved error handling with specific error messages:**
+
+1. **Enhanced `/api/create-checkout`:**
+   - Added try-catch around Stripe checkout creation
+   - Returns specific error message instead of generic "Failed to create checkout session"
+   - Includes hint about required environment variables
+
+2. **Enhanced `lib/stripe.ts`:**
+   - Added validation for `NEXT_PUBLIC_APP_URL` before creating checkout
+   - Added specific error handling for Stripe API errors
+   - Added logging for debugging
+   - Catches authentication errors and configuration errors separately
+
+3. **Error messages now show:**
+   - "STRIPE_SECRET_KEY is not configured" - if Stripe key missing
+   - "NEXT_PUBLIC_APP_URL is not configured" - if app URL missing
+   - "Stripe authentication failed" - if API key is invalid
+   - "Stripe configuration error: [details]" - for other Stripe issues
+
+#### User Action Required:
+Verify these environment variables are set in Vercel:
+```bash
+STRIPE_SECRET_KEY=sk_test_51O6leG...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_51O6leG...
+NEXT_PUBLIC_APP_URL=https://your-vercel-app.vercel.app
+```
+
+**Note:** Make sure to use the correct Vercel URL (not localhost)
+
+#### Files Modified:
+- `app/api/create-checkout/route.ts` - Better error messages
+- `lib/stripe.ts` - Validation and specific error handling
+
+#### Testing:
+After fixing environment variables, the error message will tell you exactly what's wrong.
+
+---
+
+## Post-Deployment Bug Fixes
+
 ### Issue #1: Upload Failed on Vercel - DOMMatrix Error
 **Date:** 2025-12-28
 **Severity:** Critical (P0)
