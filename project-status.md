@@ -11,7 +11,7 @@
 |---|-----------|--------|-------|
 | 1 | Core Infrastructure | ✅ Complete | Next.js, Tailwind, upload UI |
 | 2 | Resume Parsing | ✅ Complete | PDF extraction, Claude API |
-| 3 | Job Search | ⏳ Not Started | Adzuna integration |
+| 3 | Job Search | ✅ Complete | Adzuna integration |
 | 4 | Payment Flow | ⏳ Not Started | Stripe Checkout |
 | 5 | Email Delivery | ⏳ Not Started | Resend integration |
 | 6 | Polish & Deploy | ⏳ Not Started | Error handling, UX, launch |
@@ -40,14 +40,14 @@
 - [x] Handle edge cases (empty resume, image-based PDF)
 - [x] Return structured JSON with job info
 
-### Milestone 3: Job Search
+### Milestone 3: Job Search ✅
 **Goal:** Find matching jobs from Adzuna
 
-- [ ] Set up Adzuna API integration
-- [ ] Build query constructor from parsed resume
-- [ ] Fetch and format job results
-- [ ] Create JobCard and JobList components
-- [ ] Handle "no results" case
+- [x] Set up Adzuna API integration
+- [x] Build query constructor from parsed resume
+- [x] Fetch and format job results
+- [x] Create JobCard and JobList components
+- [x] Handle "no results" case
 
 ### Milestone 4: Payment Flow
 **Goal:** Accept payment via Stripe
@@ -106,6 +106,20 @@
 - ✅ JSON extraction from Claude responses
 - ✅ Field validation and defaults
 
+### Milestone 3: Job Search (Dec 28, 2025)
+- ✅ Adzuna API integration (lib/adzuna.ts)
+- ✅ Search query builder from ParsedResume
+- ✅ Location extraction and handling
+- ✅ Job fetching (up to 25 results per search)
+- ✅ Salary formatting and display
+- ✅ Job type filters (full-time, part-time)
+- ✅ JobCard component with responsive design
+- ✅ JobList component with empty state
+- ✅ No results handling with user-friendly message
+- ✅ Lazy credential initialization
+- ✅ Error handling for API failures
+- ✅ Test suite verified with live API
+
 ---
 
 ## Blockers & Open Questions
@@ -120,12 +134,13 @@
 1. ✅ ~~Complete Phase 2 setup~~
 2. ✅ ~~Begin Milestone 1~~
 3. ✅ ~~Complete Milestone 2~~
-4. **Start Milestone 3: Job Search**
-   - Set up Adzuna API integration
-   - Build query constructor from parsed resume
-   - Fetch and format job results
-   - Create JobCard and JobList components
-   - Handle "no results" case
+4. ✅ ~~Complete Milestone 3~~
+5. **Start Milestone 4: Payment Flow**
+   - Integrate Stripe Checkout
+   - Create checkout session with metadata
+   - Build webhook handler
+   - Implement success/cancel pages
+   - Connect payment to job processing
 
 ---
 
