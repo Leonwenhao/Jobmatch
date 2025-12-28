@@ -2,13 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { sessionStorage } from '@/lib/storage';
 import { UploadResponse, Session } from '@/lib/types';
-import { parseResume, validateResumeText } from '@/lib/claude';
-
-// Use require for pdf-parse (CommonJS module)
-const pdfParse = require('pdf-parse') as (
-  dataBuffer: Buffer,
-  options?: any
-) => Promise<{ text: string; numpages: number }>;
+import { parseResumePDF } from '@/lib/claude';
 
 // Constants
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -16,13 +10,16 @@ const ALLOWED_MIME_TYPES = ['application/pdf'];
 
 /**
  * POST /api/upload
- * Handles resume upload, validation, and text extraction
+ * Handles resume upload, validation, and parsing with Claude API
+ *
+ * Claude API can read PDFs directly, so we send the PDF file
+ * instead of parsing it locally (which doesn't work in serverless)
  */
 export async function POST(request: NextRequest) {
   try {
     // Parse multipart form data
     const formData = await request.formData();
-    const file = formData.get('file') as File | null;
+    const file = formData.get('resume') as File | null;
 
     // Validate file exists
     if (!file) {
@@ -48,40 +45,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Convert file to buffer for pdf-parse
+    // Convert file to base64 for Claude API
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    const base64PDF = buffer.toString('base64');
 
-    // Extract text from PDF
-    let resumeText: string;
-    try {
-      const pdfData = await pdfParse(buffer);
-      resumeText = pdfData.text;
-    } catch (pdfError) {
-      console.error('PDF parsing error:', pdfError);
-      return NextResponse.json(
-        { error: 'Failed to parse PDF. Please ensure the file is a valid PDF document.' },
-        { status: 400 }
-      );
-    }
-
-    // Validate resume text content
-    const validation = validateResumeText(resumeText);
-    if (!validation.valid) {
-      return NextResponse.json(
-        { error: validation.error },
-        { status: 400 }
-      );
-    }
-
-    // Parse resume with Claude API to extract structured data
+    // Parse resume with Claude API (sends PDF directly)
     let parsedResume;
     try {
-      parsedResume = await parseResume(resumeText.trim());
+      console.log('Parsing resume with Claude API...');
+      parsedResume = await parseResumePDF(base64PDF);
+      console.log('Resume parsed successfully:', parsedResume);
     } catch (parseError) {
       console.error('Resume parsing error:', parseError);
       return NextResponse.json(
-        { error: 'We had trouble reading your resume. Please try a different file or contact support.' },
+        {
+          error: parseError instanceof Error
+            ? parseError.message
+            : 'We had trouble reading your resume. Please try a different file or contact support.'
+        },
         { status: 400 }
       );
     }
@@ -93,7 +75,7 @@ export async function POST(request: NextRequest) {
     const session: Session = {
       id: sessionId,
       email: '', // Will be set during checkout
-      resumeText: resumeText.trim(),
+      resumeText: '', // Not needed when using PDF directly
       parsedResume, // Store parsed resume data
       status: 'pending',
       createdAt: new Date(),
@@ -101,6 +83,8 @@ export async function POST(request: NextRequest) {
 
     // Store session in memory
     sessionStorage.set(sessionId, session);
+
+    console.log(`Session ${sessionId} created successfully`);
 
     // Return success response
     const response: UploadResponse = {
