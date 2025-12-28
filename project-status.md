@@ -10,7 +10,7 @@
 | # | Milestone | Status | Notes |
 |---|-----------|--------|-------|
 | 1 | Core Infrastructure | ✅ Complete | Next.js, Tailwind, upload UI |
-| 2 | Resume Parsing | ⏳ Not Started | PDF extraction, Claude API |
+| 2 | Resume Parsing | ✅ Complete | PDF extraction, Claude API |
 | 3 | Job Search | ⏳ Not Started | Adzuna integration |
 | 4 | Payment Flow | ⏳ Not Started | Stripe Checkout |
 | 5 | Email Delivery | ⏳ Not Started | Resend integration |
@@ -31,14 +31,14 @@
 - [x] Set up environment variables structure
 - [x] Create basic file structure per engineering design
 
-### Milestone 2: Resume Parsing
+### Milestone 2: Resume Parsing ✅
 **Goal:** Extract structured data from uploaded resumes
 
-- [ ] Implement PDF text extraction
-- [ ] Set up Claude API integration
-- [ ] Write and test parsing prompt
-- [ ] Handle edge cases (empty resume, image-based PDF)
-- [ ] Return structured JSON with job info
+- [x] Implement PDF text extraction
+- [x] Set up Claude API integration
+- [x] Write and test parsing prompt
+- [x] Handle edge cases (empty resume, image-based PDF)
+- [x] Return structured JSON with job info
 
 ### Milestone 3: Job Search
 **Goal:** Find matching jobs from Adzuna
@@ -94,6 +94,18 @@
 - ✅ Environment variables structure (.env.example)
 - ✅ Build successful, dev server running
 
+### Milestone 2: Resume Parsing (Dec 28, 2025)
+- ✅ PDF text extraction with pdf-parse
+- ✅ Claude API integration (lib/claude.ts)
+- ✅ Resume parsing prompt based on engineering design
+- ✅ Lazy initialization for Anthropic client
+- ✅ Resume validation (minimum length, keyword checks)
+- ✅ Structured ParsedResume JSON output
+- ✅ Error handling for empty/unreadable PDFs
+- ✅ Integration with /api/upload endpoint
+- ✅ JSON extraction from Claude responses
+- ✅ Field validation and defaults
+
 ---
 
 ## Blockers & Open Questions
@@ -107,11 +119,13 @@
 ## Next Actions
 1. ✅ ~~Complete Phase 2 setup~~
 2. ✅ ~~Begin Milestone 1~~
-3. **Start Milestone 2: Resume Parsing**
-   - Implement PDF text extraction (already done in /api/upload)
-   - Set up Claude API integration
-   - Write and test parsing prompt
-   - Handle edge cases
+3. ✅ ~~Complete Milestone 2~~
+4. **Start Milestone 3: Job Search**
+   - Set up Adzuna API integration
+   - Build query constructor from parsed resume
+   - Fetch and format job results
+   - Create JobCard and JobList components
+   - Handle "no results" case
 
 ---
 

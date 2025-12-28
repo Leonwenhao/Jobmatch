@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { sessionStorage } from '@/lib/storage';
 import { UploadResponse, Session } from '@/lib/types';
+import { parseResume, validateResumeText } from '@/lib/claude';
 
 // Use require for pdf-parse (CommonJS module)
 const pdfParse = require('pdf-parse') as (
@@ -56,18 +57,31 @@ export async function POST(request: NextRequest) {
     try {
       const pdfData = await pdfParse(buffer);
       resumeText = pdfData.text;
-
-      // Validate that we extracted meaningful text
-      if (!resumeText || resumeText.trim().length < 50) {
-        return NextResponse.json(
-          { error: 'Could not extract text from PDF. Please ensure your resume contains readable text.' },
-          { status: 400 }
-        );
-      }
     } catch (pdfError) {
       console.error('PDF parsing error:', pdfError);
       return NextResponse.json(
         { error: 'Failed to parse PDF. Please ensure the file is a valid PDF document.' },
+        { status: 400 }
+      );
+    }
+
+    // Validate resume text content
+    const validation = validateResumeText(resumeText);
+    if (!validation.valid) {
+      return NextResponse.json(
+        { error: validation.error },
+        { status: 400 }
+      );
+    }
+
+    // Parse resume with Claude API to extract structured data
+    let parsedResume;
+    try {
+      parsedResume = await parseResume(resumeText.trim());
+    } catch (parseError) {
+      console.error('Resume parsing error:', parseError);
+      return NextResponse.json(
+        { error: 'We had trouble reading your resume. Please try a different file or contact support.' },
         { status: 400 }
       );
     }
@@ -80,6 +94,7 @@ export async function POST(request: NextRequest) {
       id: sessionId,
       email: '', // Will be set during checkout
       resumeText: resumeText.trim(),
+      parsedResume, // Store parsed resume data
       status: 'pending',
       createdAt: new Date(),
     };
