@@ -10,7 +10,7 @@ A web app where job seekers upload their resume, pay $5, and receive 25 curated 
 - **Hosting:** Vercel
 - **Payments:** Stripe Checkout (guest mode)
 - **Resume Parsing:** Claude API (Anthropic)
-- **Job Data:** Adzuna API
+- **Job Data:** Serper API (Google Search)
 - **Email:** Resend
 
 ## Architecture Overview

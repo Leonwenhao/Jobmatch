@@ -4,7 +4,7 @@
  */
 
 import dotenv from 'dotenv';
-import { searchJobs, buildSearchQuery, extractLocation } from './lib/adzuna';
+import { searchJobs, buildSearchQuery, extractLocation } from './lib/job-search';
 import { ParsedResume } from './lib/types';
 
 // Load environment variables from .env.local
@@ -12,10 +12,10 @@ dotenv.config({ path: '.env.local' });
 
 // Sample parsed resume data (simpler for testing)
 const sampleParsedResume: ParsedResume = {
-  jobTitles: ['Software Engineer'],
+  jobTitles: ['product manager'],
   skills: ['JavaScript', 'Python'],
   yearsExperience: 5,
-  location: 'New York',
+  location: 'San Francisco',
   industries: ['Technology'],
   education: "Bachelor's in Computer Science",
   jobTypes: ['full-time'],
@@ -35,14 +35,13 @@ async function testJobSearch() {
   const location = extractLocation(sampleParsedResume);
   console.log(`   ✓ Location: "${location}"`);
 
-  // Test 3: Adzuna API credentials
-  console.log('\n3. Checking Adzuna API credentials...');
-  if (!process.env.ADZUNA_APP_ID || !process.env.ADZUNA_APP_KEY) {
-    console.error('   ✗ ADZUNA_APP_ID or ADZUNA_APP_KEY not set!');
+  // Test 3: Serper API credentials
+  console.log('\n3. Checking Serper API credentials...');
+  if (!process.env.SERPER_API_KEY) {
+    console.error('   ✗ SERPER_API_KEY not set!');
     process.exit(1);
   }
-  console.log(`   ✓ App ID: ${process.env.ADZUNA_APP_ID.substring(0, 8)}...`);
-  console.log(`   ✓ App Key: ${process.env.ADZUNA_APP_KEY.substring(0, 8)}...`);
+  console.log(`   ✓ Serper API Key: ${process.env.SERPER_API_KEY.substring(0, 8)}...`);
 
   // Test 4: Search for jobs
   console.log('\n4. Searching for jobs...');

@@ -16,7 +16,7 @@ This document outlines the technical architecture, stack decisions, and implemen
 | **Hosting** | Vercel | Seamless Next.js deployment, good free tier |
 | **Payments** | Stripe Checkout | Industry standard, guest checkout support |
 | **Resume Parsing** | Claude API (Anthropic) | Best-in-class document understanding |
-| **Job Data** | Adzuna API | Free tier available, good US coverage, structured data |
+| **Job Data** | Serper API (Google Search) | Google Search for job boards, 2500 free searches/month |
 | **Email** | Resend | Simple API, great deliverability, developer-friendly |
 | **File Upload** | Vercel Blob or in-memory | Temporary storage for resume processing |
 | **Database** | None (V1) | Stateless design—process and deliver, no persistence needed |
@@ -64,9 +64,9 @@ This document outlines the technical architecture, stack decisions, and implemen
               ┌───────────────┼───────────────┐
               ▼               ▼               ▼
        ┌───────────┐   ┌───────────┐   ┌───────────┐
-       │  Claude   │   │  Adzuna   │   │  Resend   │
+       │  Claude   │   │  Serper   │   │  Resend   │
        │   API     │   │   API     │   │  (Email)  │
-       │ (Parse)   │   │  (Jobs)   │   │           │
+       │ (Parse)   │   │ (Google)  │   │           │
        └───────────┘   └───────────┘   └───────────┘
 ```
 
@@ -134,7 +134,7 @@ Stripe webhook handler.
 1. Retrieve session ID from metadata
 2. Get stored resume
 3. Parse resume with Claude API
-4. Query Adzuna API with extracted criteria
+4. Query Google (via Serper) for jobs on specific job boards
 5. Store results temporarily
 6. Queue email with remaining 20 jobs
 7. Delete resume from storage
@@ -204,28 +204,43 @@ Resume content:
 
 ---
 
-### Job Search (Adzuna API)
+### Job Search (Serper API - Google Search)
 
 **API Details:**
-- Base URL: `https://api.adzuna.com/v1/api/jobs/us/search/1`
-- Auth: App ID + App Key (in query params)
-- Free tier: 250 requests/day
-- Returns: 10 results per page by default
+- Base URL: `https://google.serper.dev/search`
+- Auth: API key in `X-API-KEY` header
+- Method: POST
+- Free tier: 2500 searches/month
 
-**Query Parameters:**
-```
-what: {job titles and skills}
-where: {location}
-category: {mapped from industries}
-full_time: 1 (if applicable)
-permanent: 1 (if applicable)
-results_per_page: 25
+**Targeted Job Boards:**
+- jobs.ashbyhq.com (Ashby)
+- boards.greenhouse.io (Greenhouse)
+- jobs.lever.co (Lever)
+- jobs.workable.com (Workable)
+- recruiting.paylocity.com (Paylocity)
+- jobs.smartrecruiters.com (SmartRecruiters)
+
+**Request Body:**
+```json
+{
+  "q": "site:jobs.ashbyhq.com OR site:boards.greenhouse.io \"Software Engineer\" \"New York\"",
+  "num": 25,
+  "gl": "us"
+}
 ```
 
-**Mapping logic:**
-- Combine top 2-3 job titles with top skills for `what` parameter
-- Use extracted location for `where`
-- May need multiple queries to get diverse results
+**Query Construction:**
+- Combine all job boards with `site:` operators and `OR`
+- Wrap job titles in quotes for exact matching
+- Include location if available
+- Keep query simple to maximize results
+
+**Data Extraction:**
+- Parse job title, company from Google result title
+- Extract location from snippet using regex patterns
+- Extract salary if present in snippet
+- Generate unique job ID from URL hash
+- Identify source (job board) from URL
 
 ---
 
@@ -289,7 +304,7 @@ jobmatch/
 │   └── LoadingState.tsx         # Processing indicator
 ├── lib/
 │   ├── claude.ts                # Claude API integration
-│   ├── adzuna.ts                # Adzuna API integration
+│   ├── job-search.ts            # Job search via Serper (Google)
 │   ├── stripe.ts                # Stripe helpers
 │   ├── resend.ts                # Email sending
 │   ├── storage.ts               # Temporary file storage
@@ -326,9 +341,8 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 # Claude API
 ANTHROPIC_API_KEY=sk-ant-...
 
-# Adzuna
-ADZUNA_APP_ID=...
-ADZUNA_APP_KEY=...
+# Serper (Google Search)
+SERPER_API_KEY=...
 
 # Resend
 RESEND_API_KEY=re_...
@@ -359,7 +373,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 | Invalid PDF | "Please upload a valid PDF file" | Reject upload |
 | Empty resume | "We couldn't find enough information in your resume" | Refund or retry option |
 | Claude API failure | "We're having trouble processing your resume. Please try again." | Log, alert, retry |
-| Adzuna API failure | "We're having trouble finding jobs right now. We'll email your results when ready." | Retry, fallback, manual review |
+| Job search API failure | "We're having trouble finding jobs right now. We'll email your results when ready." | Retry, fallback, manual review |
 | Stripe webhook failure | (Silent to user) | Log, retry, alert admin |
 | Email send failure | (Silent to user) | Retry with backoff, alert admin |
 | No jobs found | "We couldn't find matches for your profile right now. We'll email you if we find relevant jobs." | Consider refund |
@@ -369,7 +383,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ## Performance Considerations
 
 - **Resume parsing:** ~2-5 seconds (Claude API)
-- **Job search:** ~1-2 seconds (Adzuna API)
+- **Job search:** ~1-2 seconds (Serper API)
 - **Total processing:** ~5-10 seconds
 - **User experience:** Show loading state, display results as soon as ready
 
@@ -396,10 +410,10 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [ ] Structured data output
 
 ### Milestone 3: Job Search
-- [ ] Adzuna API integration
-- [ ] Search query construction from parsed resume
-- [ ] Results formatting
-- [ ] Job card component
+- [x] Serper API integration (Google Search)
+- [x] Search query construction from parsed resume
+- [x] Results formatting
+- [x] Job card component
 
 ### Milestone 4: Payment Flow
 - [ ] Stripe Checkout integration
