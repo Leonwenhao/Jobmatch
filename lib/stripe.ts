@@ -24,10 +24,17 @@ export async function createCheckoutSession(
   email: string
 ): Promise<string> {
   const stripe = getStripeClient();
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+
+  if (!appUrl) {
+    throw new Error('NEXT_PUBLIC_APP_URL is not configured. Please set it in Vercel environment variables.');
+  }
+
+  console.log(`Creating Stripe checkout session for ${email}, appUrl: ${appUrl}`);
 
   // Create checkout session
-  const checkoutSession = await stripe.checkout.sessions.create({
+  try {
+    const checkoutSession = await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
     mode: 'payment',
     line_items: [
@@ -47,15 +54,30 @@ export async function createCheckoutSession(
     metadata: {
       sessionId: sessionId, // Pass our session ID for correlation
     },
-    success_url: `${appUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${appUrl}/cancel`,
-  });
+      success_url: `${appUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/cancel`,
+    });
 
-  if (!checkoutSession.url) {
-    throw new Error('Failed to create checkout session URL');
+    if (!checkoutSession.url) {
+      throw new Error('Stripe did not return a checkout URL. Please check your Stripe configuration.');
+    }
+
+    console.log(`Stripe checkout session created: ${checkoutSession.id}`);
+    return checkoutSession.url;
+  } catch (error: any) {
+    console.error('Stripe API error:', error);
+
+    if (error.type === 'StripeInvalidRequestError') {
+      throw new Error(`Stripe configuration error: ${error.message}`);
+    }
+
+    if (error.type === 'StripeAuthenticationError') {
+      throw new Error('Stripe authentication failed. Check your STRIPE_SECRET_KEY.');
+    }
+
+    // Re-throw with more context
+    throw new Error(`Stripe error: ${error.message || 'Unknown error'}`);
   }
-
-  return checkoutSession.url;
 }
 
 /**

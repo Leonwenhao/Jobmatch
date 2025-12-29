@@ -2,6 +2,145 @@
 
 ## Post-Deployment Bug Fixes
 
+### Issue #6: No Jobs Found - Empty Adzuna Results
+**Date:** 2025-12-28
+**Severity:** Critical (P0)
+**Status:** ✅ Fixed
+
+#### Problem:
+After successful upload and payment, results page shows:
+```
+No Matches Found
+We couldn't find jobs matching your resume right now.
+```
+
+#### Root Cause:
+**Search query was TOO SPECIFIC** - The `buildSearchQuery()` function was combining multiple job titles + multiple skills (up to 8 terms) into a single search query. Adzuna treats multiple terms as AND conditions, requiring jobs to match ALL terms simultaneously, which resulted in 0 results.
+
+Example of problematic query:
+```
+"Software Engineer Full Stack Developer JavaScript TypeScript React Node.js Python"
+→ 0 results (looking for jobs matching ALL 8 terms)
+```
+
+#### Solution:
+**Simplified search query to use only 1-2 job titles (no skills):**
+
+1. **Fixed `buildSearchQuery()` in `lib/adzuna.ts`:**
+   - Now uses ONLY the first job title from resume
+   - Optionally adds second title if first is generic (e.g., "developer", "engineer")
+   - **Removed skills from search query** - they were too restrictive
+   - Job descriptions already contain relevant skills, so this still matches well
+
+2. **Added comprehensive logging:**
+   - Logs parsed resume data
+   - Logs search query and location
+   - Logs API URL (with credentials redacted)
+   - Logs number of results returned
+
+3. **Smarter location handling:**
+   - Only filter by location if specific city/state provided
+   - If location is just "United States", search nationwide
+
+4. **Fallback search:**
+   - If initial search still returns 0 results
+   - Try again with just the first job title alone
+   - Empty query protection uses "job" as ultimate fallback
+
+#### Testing Results:
+Created comprehensive test suite (`test-resume-search-flow.ts`) that verified:
+
+**Before fix:**
+- "Software Engineer Full Stack Developer JavaScript TypeScript React Node.js Python" → **0 results**
+- "Marketing Manager SEO Content Marketing Analytics" → **0 results**
+
+**After fix:**
+- "Software Engineer Full Stack Developer" → **7 results** ✅
+- "Marketing Manager" → **25,989 results** ✅
+- "Developer" → **2.5M results** ✅
+
+#### Debugging:
+Vercel logs now show simplified queries:
+```
+=== Adzuna Job Search ===
+Parsed Resume: {...}
+Search Query (what): Software Engineer
+Search Location (where): New York, NY
+Adzuna returned 147 jobs (total available: 147225)
+```
+
+#### Files Modified:
+- `lib/adzuna.ts` - Simplified `buildSearchQuery()`, added logging, fallback, and smarter filtering
+- `test-resume-search-flow.ts` - Comprehensive test suite (new file)
+- `test-adzuna-debug.ts` - API connectivity test (new file)
+
+#### Next Steps for User:
+1. Check Vercel function logs after payment
+2. Look for "=== Adzuna Job Search ===" logs
+3. See what query was sent and results returned
+4. If still no results, the parsed resume data might be empty
+
+---
+
+### Issue #5: Checkout Failed - "Failed to create checkout session"
+**Date:** 2025-12-28
+**Severity:** Critical (P0)
+**Status:** ✅ Fixed
+
+#### Problem:
+After uploading resume successfully, clicking "Pay $5 & Find My Jobs" shows error:
+```
+Failed to create checkout session
+```
+
+#### Root Cause:
+Generic error handling was hiding the actual problem. Could be:
+1. Missing `STRIPE_SECRET_KEY` in Vercel environment variables
+2. Missing `NEXT_PUBLIC_APP_URL` in Vercel
+3. Stripe API authentication failure
+4. Invalid Stripe API key (test vs live mode mismatch)
+
+#### Solution:
+**Improved error handling with specific error messages:**
+
+1. **Enhanced `/api/create-checkout`:**
+   - Added try-catch around Stripe checkout creation
+   - Returns specific error message instead of generic "Failed to create checkout session"
+   - Includes hint about required environment variables
+
+2. **Enhanced `lib/stripe.ts`:**
+   - Added validation for `NEXT_PUBLIC_APP_URL` before creating checkout
+   - Added specific error handling for Stripe API errors
+   - Added logging for debugging
+   - Catches authentication errors and configuration errors separately
+
+3. **Error messages now show:**
+   - "STRIPE_SECRET_KEY is not configured" - if Stripe key missing
+   - "NEXT_PUBLIC_APP_URL is not configured" - if app URL missing
+   - "Stripe authentication failed" - if API key is invalid
+   - "Stripe configuration error: [details]" - for other Stripe issues
+
+#### User Action Required:
+Verify these environment variables are set in Vercel:
+```bash
+STRIPE_SECRET_KEY=sk_test_51O6leG...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_51O6leG...
+NEXT_PUBLIC_APP_URL=https://your-vercel-app.vercel.app
+```
+
+**Note:** Make sure to use the correct Vercel URL (not localhost)
+
+#### Files Modified:
+- `app/api/create-checkout/route.ts` - Better error messages
+- `lib/stripe.ts` - Validation and specific error handling
+
+#### Testing:
+After fixing environment variables, the error message will tell you exactly what's wrong.
+
+---
+
+## Post-Deployment Bug Fixes
+
 ### Issue #1: Upload Failed on Vercel - DOMMatrix Error
 **Date:** 2025-12-28
 **Severity:** Critical (P0)

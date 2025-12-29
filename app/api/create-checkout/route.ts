@@ -46,7 +46,25 @@ export async function POST(request: NextRequest) {
     }
 
     // Create Stripe checkout session
-    const checkoutUrl = await createCheckoutSession(sessionId, email);
+    let checkoutUrl: string;
+    try {
+      checkoutUrl = await createCheckoutSession(sessionId, email);
+    } catch (stripeError) {
+      console.error('Stripe checkout creation error:', stripeError);
+
+      // Return more specific error message
+      const errorMessage = stripeError instanceof Error
+        ? stripeError.message
+        : 'Unknown Stripe error';
+
+      return NextResponse.json(
+        {
+          error: `Stripe error: ${errorMessage}`,
+          details: 'Check that STRIPE_SECRET_KEY and NEXT_PUBLIC_APP_URL are set in Vercel environment variables'
+        },
+        { status: 500 }
+      );
+    }
 
     // Return checkout URL
     const response: CheckoutResponse = {
@@ -56,8 +74,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
     console.error('Checkout creation error:', error);
+
+    const errorMessage = error instanceof Error
+      ? error.message
+      : 'Failed to create checkout session';
+
     return NextResponse.json(
-      { error: 'Failed to create checkout session' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
