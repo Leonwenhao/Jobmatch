@@ -15,47 +15,64 @@ We couldn't find jobs matching your resume right now.
 ```
 
 #### Root Cause:
-1. **Search query too specific** - Combining all job titles + all skills creates very narrow queries that return 0 results
-2. **Location filtering too strict** - Some locations don't match Adzuna's database
-3. **No fallback** - If first search fails, no retry with broader criteria
-4. **No logging** - Can't see what queries are being sent to Adzuna
+**Search query was TOO SPECIFIC** - The `buildSearchQuery()` function was combining multiple job titles + multiple skills (up to 8 terms) into a single search query. Adzuna treats multiple terms as AND conditions, requiring jobs to match ALL terms simultaneously, which resulted in 0 results.
+
+Example of problematic query:
+```
+"Software Engineer Full Stack Developer JavaScript TypeScript React Node.js Python"
+→ 0 results (looking for jobs matching ALL 8 terms)
+```
 
 #### Solution:
-**Improved Adzuna search with fallback logic:**
+**Simplified search query to use only 1-2 job titles (no skills):**
 
-1. **Added comprehensive logging:**
+1. **Fixed `buildSearchQuery()` in `lib/adzuna.ts`:**
+   - Now uses ONLY the first job title from resume
+   - Optionally adds second title if first is generic (e.g., "developer", "engineer")
+   - **Removed skills from search query** - they were too restrictive
+   - Job descriptions already contain relevant skills, so this still matches well
+
+2. **Added comprehensive logging:**
    - Logs parsed resume data
    - Logs search query and location
    - Logs API URL (with credentials redacted)
    - Logs number of results returned
 
-2. **Smarter location handling:**
+3. **Smarter location handling:**
    - Only filter by location if specific city/state provided
-   - If location is just "United States", search nationwide (don't filter)
+   - If location is just "United States", search nationwide
 
-3. **Fallback search:**
-   - If initial search returns 0 results
-   - Try again with just the first job title (no skills)
-   - This casts a wider net while still being relevant
+4. **Fallback search:**
+   - If initial search still returns 0 results
+   - Try again with just the first job title alone
+   - Empty query protection uses "job" as ultimate fallback
 
-4. **Empty query handling:**
-   - If no search terms found, use "job" as fallback
-   - Prevents API errors from empty queries
+#### Testing Results:
+Created comprehensive test suite (`test-resume-search-flow.ts`) that verified:
+
+**Before fix:**
+- "Software Engineer Full Stack Developer JavaScript TypeScript React Node.js Python" → **0 results**
+- "Marketing Manager SEO Content Marketing Analytics" → **0 results**
+
+**After fix:**
+- "Software Engineer Full Stack Developer" → **7 results** ✅
+- "Marketing Manager" → **25,989 results** ✅
+- "Developer" → **2.5M results** ✅
 
 #### Debugging:
-Now you can see in Vercel logs exactly what's being searched:
+Vercel logs now show simplified queries:
 ```
 === Adzuna Job Search ===
 Parsed Resume: {...}
-Search Query (what): Software Engineer JavaScript Python
+Search Query (what): Software Engineer
 Search Location (where): New York, NY
-Adzuna returned 0 jobs (total available: 0)
-Trying broader search...
-Broader search returned 125 jobs
+Adzuna returned 147 jobs (total available: 147225)
 ```
 
 #### Files Modified:
-- `lib/adzuna.ts` - Added logging, fallback, and smarter filtering
+- `lib/adzuna.ts` - Simplified `buildSearchQuery()`, added logging, fallback, and smarter filtering
+- `test-resume-search-flow.ts` - Comprehensive test suite (new file)
+- `test-adzuna-debug.ts` - API connectivity test (new file)
 
 #### Next Steps for User:
 1. Check Vercel function logs after payment

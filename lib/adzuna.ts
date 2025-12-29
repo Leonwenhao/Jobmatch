@@ -38,21 +38,30 @@ interface AdzunaResponse {
 
 /**
  * Build search query string from parsed resume data
+ * IMPORTANT: Keep queries simple to avoid 0 results
+ * Adzuna treats multiple terms as AND conditions
  */
 export function buildSearchQuery(parsedResume: ParsedResume): string {
   const terms: string[] = [];
 
-  // Add top 2-3 job titles
+  // Only use the top 1-2 job titles (DO NOT add skills - too restrictive)
   if (parsedResume.jobTitles && parsedResume.jobTitles.length > 0) {
-    const topTitles = parsedResume.jobTitles.slice(0, 3);
-    terms.push(...topTitles);
+    // Just use the first job title for best results
+    // Adding more terms creates too narrow a search
+    const topTitle = parsedResume.jobTitles[0];
+    terms.push(topTitle);
+
+    // Optionally add second title ONLY if first title is very generic
+    const genericTitles = ['developer', 'engineer', 'manager', 'analyst', 'coordinator'];
+    if (parsedResume.jobTitles.length > 1 &&
+        genericTitles.some(generic => topTitle.toLowerCase().includes(generic))) {
+      terms.push(parsedResume.jobTitles[1]);
+    }
   }
 
-  // Add top 3-5 skills
-  if (parsedResume.skills && parsedResume.skills.length > 0) {
-    const topSkills = parsedResume.skills.slice(0, 5);
-    terms.push(...topSkills);
-  }
+  // Do NOT add skills to the search query
+  // Skills are too specific and cause 0 results
+  // The job descriptions already contain relevant skills
 
   return terms.join(' ');
 }
