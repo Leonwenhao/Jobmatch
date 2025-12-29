@@ -18,6 +18,40 @@ function getStripeClient(): Stripe {
 }
 
 /**
+ * Compress parsedResume to fit within Stripe's 500 char metadata limit
+ * Prioritizes jobTitles and location (critical for search), truncates arrays
+ */
+function compressResumeForMetadata(resume: ParsedResume): string {
+  // Start with essential fields
+  const compressed: ParsedResume = {
+    jobTitles: resume.jobTitles.slice(0, 3), // Keep top 3 job titles
+    skills: resume.skills.slice(0, 5), // Keep top 5 skills
+    yearsExperience: resume.yearsExperience,
+    location: resume.location,
+    industries: resume.industries.slice(0, 2), // Keep top 2 industries
+    education: resume.education?.slice(0, 30) || null, // Truncate education to 30 chars
+    jobTypes: [], // Skip job types to save space
+  };
+
+  let json = JSON.stringify(compressed);
+
+  // If still over 500, reduce skills further
+  while (json.length > 500 && compressed.skills.length > 2) {
+    compressed.skills.pop();
+    json = JSON.stringify(compressed);
+  }
+
+  // If still over 500, reduce industries
+  while (json.length > 500 && compressed.industries.length > 1) {
+    compressed.industries.pop();
+    json = JSON.stringify(compressed);
+  }
+
+  console.log(`Compressed resume metadata: ${json.length} chars`);
+  return json;
+}
+
+/**
  * Create a Stripe Checkout session for job search payment
  * Stores parsedResume in metadata to survive serverless function restarts
  */
@@ -56,9 +90,9 @@ export async function createCheckoutSession(
     customer_email: email,
     metadata: {
       sessionId: sessionId, // Pass our session ID for correlation
-      // Store parsedResume as JSON for serverless persistence
-      // Stripe metadata values are limited to 500 chars, so we encode it
-      parsedResume: parsedResume ? JSON.stringify(parsedResume) : '',
+      // Store compressed parsedResume for serverless persistence
+      // Stripe metadata values are limited to 500 chars
+      parsedResume: parsedResume ? compressResumeForMetadata(parsedResume) : '',
     },
       success_url: `${appUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/cancel`,
