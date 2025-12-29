@@ -4,6 +4,7 @@ import { constructWebhookEvent } from '@/lib/stripe';
 import { sessionStorage } from '@/lib/storage';
 import { searchJobs } from '@/lib/job-search';
 import { sendJobEmail } from '@/lib/resend';
+import { ParsedResume, Session } from '@/lib/types';
 import Stripe from 'stripe';
 
 /**
@@ -52,15 +53,47 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Get our session data
-      const session = sessionStorage.get(sessionId);
+      // Get our session data from memory, or reconstruct from Stripe metadata
+      let session = sessionStorage.get(sessionId);
 
+      // If session not found in memory (serverless cold start), reconstruct from Stripe metadata
       if (!session) {
-        console.error(`Session ${sessionId} not found`);
-        return NextResponse.json(
-          { error: 'Session not found' },
-          { status: 404 }
-        );
+        console.log(`Session ${sessionId} not in memory, reconstructing from Stripe metadata`);
+
+        const parsedResumeJson = checkoutSession.metadata?.parsedResume;
+        const email = checkoutSession.customer_email || '';
+
+        if (!parsedResumeJson) {
+          console.error(`No parsedResume in Stripe metadata for session ${sessionId}`);
+          return NextResponse.json(
+            { error: 'Session data not found in Stripe metadata' },
+            { status: 404 }
+          );
+        }
+
+        try {
+          const parsedResume: ParsedResume = JSON.parse(parsedResumeJson);
+
+          // Create a new session from Stripe metadata
+          session = {
+            id: sessionId,
+            email: email,
+            resumeText: '', // Not needed for job search
+            parsedResume: parsedResume,
+            status: 'pending',
+            createdAt: new Date(),
+          };
+
+          // Store the reconstructed session
+          sessionStorage.set(sessionId, session);
+          console.log(`Reconstructed session ${sessionId} from Stripe metadata`);
+        } catch (parseError) {
+          console.error(`Failed to parse parsedResume from Stripe metadata:`, parseError);
+          return NextResponse.json(
+            { error: 'Invalid session data in Stripe metadata' },
+            { status: 500 }
+          );
+        }
       }
 
       console.log(`Processing payment for session ${sessionId}`);

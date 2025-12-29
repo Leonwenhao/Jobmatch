@@ -45,10 +45,13 @@ export async function POST(request: NextRequest) {
       sessionStorage.update(sessionId, session);
     }
 
+    // Get parsedResume to pass to Stripe (for serverless persistence)
+    const parsedResume = session?.parsedResume;
+
     // Create Stripe checkout session
     let checkoutUrl: string;
     try {
-      checkoutUrl = await createCheckoutSession(sessionId, email);
+      checkoutUrl = await createCheckoutSession(sessionId, email, parsedResume);
     } catch (stripeError) {
       console.error('Stripe checkout creation error:', stripeError);
 

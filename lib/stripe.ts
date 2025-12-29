@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { ParsedResume } from './types';
 
 // Lazy initialization of Stripe client
 let stripeClient: Stripe | null = null;
@@ -18,10 +19,12 @@ function getStripeClient(): Stripe {
 
 /**
  * Create a Stripe Checkout session for job search payment
+ * Stores parsedResume in metadata to survive serverless function restarts
  */
 export async function createCheckoutSession(
   sessionId: string,
-  email: string
+  email: string,
+  parsedResume?: ParsedResume
 ): Promise<string> {
   const stripe = getStripeClient();
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
@@ -53,6 +56,9 @@ export async function createCheckoutSession(
     customer_email: email,
     metadata: {
       sessionId: sessionId, // Pass our session ID for correlation
+      // Store parsedResume as JSON for serverless persistence
+      // Stripe metadata values are limited to 500 chars, so we encode it
+      parsedResume: parsedResume ? JSON.stringify(parsedResume) : '',
     },
       success_url: `${appUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/cancel`,
@@ -105,4 +111,38 @@ export async function getCheckoutSession(
 ): Promise<Stripe.Checkout.Session> {
   const stripe = getStripeClient();
   return await stripe.checkout.sessions.retrieve(checkoutSessionId);
+}
+
+/**
+ * Find a completed checkout session by our sessionId in metadata
+ * Returns the parsedResume if found
+ */
+export async function findCheckoutSessionBySessionId(
+  sessionId: string
+): Promise<{ parsedResume: ParsedResume; email: string } | null> {
+  const stripe = getStripeClient();
+
+  try {
+    // List recent checkout sessions and find one with matching sessionId
+    const sessions = await stripe.checkout.sessions.list({
+      limit: 100, // Check last 100 sessions
+    });
+
+    for (const session of sessions.data) {
+      if (session.metadata?.sessionId === sessionId && session.payment_status === 'paid') {
+        const parsedResumeJson = session.metadata?.parsedResume;
+        if (parsedResumeJson) {
+          return {
+            parsedResume: JSON.parse(parsedResumeJson),
+            email: session.customer_email || '',
+          };
+        }
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error finding checkout session by sessionId:', error);
+    return null;
+  }
 }
