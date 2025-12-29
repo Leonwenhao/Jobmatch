@@ -227,7 +227,7 @@ export async function sendTestEmail(to: string): Promise<boolean> {
       location: 'San Francisco, CA',
       url: 'https://example.com/job/1',
       salary: '$120k - $160k',
-      source: 'adzuna',
+      source: 'Greenhouse',
     },
     {
       id: '2',
@@ -236,7 +236,7 @@ export async function sendTestEmail(to: string): Promise<boolean> {
       location: 'New York, NY',
       url: 'https://example.com/job/2',
       salary: '$100k - $140k',
-      source: 'adzuna',
+      source: 'Ashby',
     },
   ];
 
