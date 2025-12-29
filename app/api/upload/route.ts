@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
-import { sessionStorage } from '@/lib/storage';
+import { setSession } from '@/lib/storage';
 import { UploadResponse, Session } from '@/lib/types';
 import { parseResumePDF } from '@/lib/claude';
 
@@ -81,8 +81,8 @@ export async function POST(request: NextRequest) {
       createdAt: new Date(),
     };
 
-    // Store session in memory
-    sessionStorage.set(sessionId, session);
+    // Store session in Redis
+    await setSession(sessionId, session);
 
     console.log(`Session ${sessionId} created successfully`);
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createCheckoutSession } from '@/lib/stripe';
-import { sessionStorage } from '@/lib/storage';
+import { getSession, updateSession, hasSession } from '@/lib/storage';
 import { CheckoutRequest, CheckoutResponse } from '@/lib/types';
 
 /**
@@ -30,8 +30,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify session exists
-    if (!sessionStorage.has(sessionId)) {
+    // Verify session exists and get it from Redis
+    const session = await getSession(sessionId);
+    if (!session) {
       return NextResponse.json(
         { error: 'Session not found or expired' },
         { status: 404 }
@@ -39,16 +40,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Update session with email
-    const session = sessionStorage.get(sessionId);
-    if (session) {
-      session.email = email;
-      sessionStorage.update(sessionId, session);
-    }
+    session.email = email;
+    await updateSession(sessionId, session);
+
+    // Get parsedResume to pass to Stripe (as backup)
+    const parsedResume = session.parsedResume;
 
     // Create Stripe checkout session
     let checkoutUrl: string;
     try {
-      checkoutUrl = await createCheckoutSession(sessionId, email);
+      checkoutUrl = await createCheckoutSession(sessionId, email, parsedResume);
     } catch (stripeError) {
       console.error('Stripe checkout creation error:', stripeError);
 

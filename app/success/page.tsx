@@ -18,26 +18,31 @@ function SuccessContent() {
       return;
     }
 
-    // Extract our session ID from Stripe metadata
-    // In the webhook, we stored our sessionId in the Stripe checkout metadata
-    // For now, we'll redirect to results and let it poll for completion
+    // Get our session ID from Stripe checkout metadata (more reliable than localStorage)
     const redirectToResults = async () => {
       try {
-        // Wait a moment for webhook processing to start
+        // Wait a moment for webhook processing
         await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // The Stripe checkout session ID isn't the same as our session ID
-        // We need to get our session ID from the Stripe session metadata
-        // For now, we'll use a simple approach: store it in localStorage during checkout
-        const sessionId = localStorage.getItem('jobmatch_session_id');
+        // Fetch our session ID from Stripe checkout session metadata
+        const response = await fetch(`/api/get-session?checkout_session_id=${checkoutSessionId}`);
 
-        if (sessionId) {
+        if (response.ok) {
+          const { sessionId } = await response.json();
           router.push(`/results/${sessionId}`);
-        } else {
-          // Fallback: just redirect and let the user see an error
-          setError('Could not find your session. Please check your email for results or contact support.');
-          setIsProcessing(false);
+          return;
         }
+
+        // Fallback to localStorage if API fails (for backwards compatibility)
+        const localSessionId = localStorage.getItem('jobmatch_session_id');
+        if (localSessionId) {
+          router.push(`/results/${localSessionId}`);
+          return;
+        }
+
+        // No session found
+        setError('Could not find your session. Please check your email for results or contact support.');
+        setIsProcessing(false);
       } catch (err) {
         console.error('Error redirecting:', err);
         setError('Failed to retrieve results');
