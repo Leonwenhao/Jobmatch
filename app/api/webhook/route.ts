@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { constructWebhookEvent } from '@/lib/stripe';
-import { sessionStorage } from '@/lib/storage';
+import { getSession, setSession, updateSession } from '@/lib/storage';
 import { searchJobs } from '@/lib/job-search';
 import { sendJobEmail } from '@/lib/resend';
 import { ParsedResume, Session } from '@/lib/types';
@@ -53,20 +53,20 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Get our session data from memory, or reconstruct from Stripe metadata
-      let session = sessionStorage.get(sessionId);
+      // Get session from Redis
+      let session = await getSession(sessionId);
 
-      // If session not found in memory (serverless cold start), reconstruct from Stripe metadata
+      // If session not in Redis, try to reconstruct from Stripe metadata (backup)
       if (!session) {
-        console.log(`Session ${sessionId} not in memory, reconstructing from Stripe metadata`);
+        console.log(`Session ${sessionId} not in Redis, trying Stripe metadata fallback`);
 
         const parsedResumeJson = checkoutSession.metadata?.parsedResume;
         const email = checkoutSession.customer_email || '';
 
         if (!parsedResumeJson) {
-          console.error(`No parsedResume in Stripe metadata for session ${sessionId}`);
+          console.error(`Session ${sessionId} not found in Redis or Stripe metadata`);
           return NextResponse.json(
-            { error: 'Session data not found in Stripe metadata' },
+            { error: 'Session not found' },
             { status: 404 }
           );
         }
@@ -74,23 +74,21 @@ export async function POST(request: NextRequest) {
         try {
           const parsedResume: ParsedResume = JSON.parse(parsedResumeJson);
 
-          // Create a new session from Stripe metadata
           session = {
             id: sessionId,
             email: email,
-            resumeText: '', // Not needed for job search
+            resumeText: '',
             parsedResume: parsedResume,
             status: 'pending',
             createdAt: new Date(),
           };
 
-          // Store the reconstructed session
-          sessionStorage.set(sessionId, session);
+          await setSession(sessionId, session);
           console.log(`Reconstructed session ${sessionId} from Stripe metadata`);
         } catch (parseError) {
-          console.error(`Failed to parse parsedResume from Stripe metadata:`, parseError);
+          console.error(`Failed to parse Stripe metadata:`, parseError);
           return NextResponse.json(
-            { error: 'Invalid session data in Stripe metadata' },
+            { error: 'Invalid session data' },
             { status: 500 }
           );
         }
@@ -98,9 +96,9 @@ export async function POST(request: NextRequest) {
 
       console.log(`Processing payment for session ${sessionId}`);
 
-      // Update session status to paid
+      // Update session status to processing
       session.status = 'processing';
-      sessionStorage.update(sessionId, session);
+      await updateSession(sessionId, session);
 
       try {
         // Resume is already parsed during upload, use the stored parsedResume
@@ -117,7 +115,7 @@ export async function POST(request: NextRequest) {
 
         // Update session with jobs
         session.jobs = jobs;
-        sessionStorage.update(sessionId, session);
+        await updateSession(sessionId, session);
 
         // Send email with remaining 20 jobs (5 shown on results page, 20 via email)
         if (jobs.length > 5 && session.email) {
@@ -144,7 +142,7 @@ export async function POST(request: NextRequest) {
 
         // Mark session as complete
         session.status = 'complete';
-        sessionStorage.update(sessionId, session);
+        await updateSession(sessionId, session);
 
         console.log(`Session ${sessionId} processing complete`);
 
@@ -154,7 +152,7 @@ export async function POST(request: NextRequest) {
 
         // Mark session as failed
         session.status = 'failed';
-        sessionStorage.update(sessionId, session);
+        await updateSession(sessionId, session);
 
         return NextResponse.json(
           { error: 'Processing failed' },

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sessionStorage } from '@/lib/storage';
+import { getSession, setSession } from '@/lib/storage';
 import { findCheckoutSessionBySessionId } from '@/lib/stripe';
 import { searchJobs } from '@/lib/job-search';
 import { sendJobEmail } from '@/lib/resend';
@@ -23,17 +23,16 @@ export async function GET(
       );
     }
 
-    // Get session data from memory
-    let session = sessionStorage.get(sessionId);
+    // Get session data from Redis
+    let session = await getSession(sessionId);
 
-    // If session not found in memory (serverless cold start), try to reconstruct from Stripe
+    // If session not in Redis, try Stripe metadata as backup
     if (!session) {
-      console.log(`Session ${sessionId} not in memory, checking Stripe...`);
+      console.log(`Session ${sessionId} not in Redis, checking Stripe...`);
 
       const stripeData = await findCheckoutSessionBySessionId(sessionId);
 
       if (!stripeData) {
-        // No paid session found in Stripe
         return NextResponse.json(
           { error: 'Session not found or expired. Please try uploading your resume again.' },
           { status: 404 }
@@ -42,13 +41,11 @@ export async function GET(
 
       console.log(`Found Stripe session for ${sessionId}, running job search...`);
 
-      // Reconstruct session and run job search
       try {
         const jobs = await searchJobs(stripeData.parsedResume, 25);
 
         console.log(`Found ${jobs.length} jobs for session ${sessionId}`);
 
-        // Create session with results
         session = {
           id: sessionId,
           email: stripeData.email,
@@ -59,11 +56,10 @@ export async function GET(
           createdAt: new Date(),
         };
 
-        // Store for future requests
-        sessionStorage.set(sessionId, session);
+        // Store in Redis for future requests
+        await setSession(sessionId, session);
 
-        // Send email with remaining jobs if not already sent
-        // (We check this by seeing if we just created the session)
+        // Send email if not already sent
         if (jobs.length > 5 && stripeData.email) {
           const emailJobs = jobs.slice(5);
           console.log(`Sending ${emailJobs.length} jobs via email to ${stripeData.email}`);
