@@ -40,7 +40,7 @@ User                    Frontend                   Backend                    Ex
  │                         │                          │◀─────────────────────────────│
  │                         │                          │                              │
  │                         │                          │  12. Search jobs             │
- │                         │                          │─────────────────────────────▶│ Adzuna API
+ │                         │                          │─────────────────────────────▶│ Serper API
  │                         │                          │◀─────────────────────────────│
  │                         │                          │                              │
  │                         │                          │  13. Store results (temp)    │
@@ -105,7 +105,7 @@ All backend logic runs in Vercel serverless functions:
 ```
 lib/
 ├── claude.ts      # Resume parsing with Claude API
-├── adzuna.ts      # Job search queries
+├── job-search.ts  # Job search queries (Serper/Google)
 ├── stripe.ts      # Checkout and webhook helpers
 ├── resend.ts      # Email delivery
 ├── storage.ts     # Temporary file/data storage
@@ -155,7 +155,7 @@ interface Job {
   url: string;
   salary?: string;
   description?: string;
-  source: 'adzuna';
+  source: 'Ashby' | 'Greenhouse' | 'Lever' | 'Workable' | 'Paylocity' | 'SmartRecruiters' | 'Job Board';
 }
 ```
 
@@ -171,12 +171,13 @@ interface Job {
 - **Output:** Structured ParsedResume JSON
 - **Latency:** ~2-5 seconds
 
-### Adzuna API (Job Search)
+### Serper API (Job Search via Google)
 
-- **Base URL:** `https://api.adzuna.com/v1/api/jobs/us/search/1`
-- **Auth:** App ID + App Key in query params
-- **Rate Limit:** 250 requests/day (free tier)
+- **Base URL:** `https://google.serper.dev/search`
+- **Auth:** API key in X-API-KEY header
+- **Rate Limit:** 2500 searches/month (free tier)
 - **Results:** 25 per request (configurable)
+- **Job Boards:** Ashby, Greenhouse, Lever, Workable, Paylocity, SmartRecruiters
 
 ### Stripe (Payments)
 
@@ -220,7 +221,7 @@ const sessions = new Map<string, Session>();
 |---------------|--------|----------|
 | PDF parsing fails | Can't extract text | Show error, suggest different file |
 | Claude API down | Can't parse resume | Retry, then refund |
-| Adzuna API down | Can't find jobs | Retry, queue for later, refund |
+| Job search API down | Can't find jobs | Retry, queue for later, refund |
 | Stripe webhook fails | Payment received but not processed | Retry mechanism, manual review |
 | Email fails | User doesn't get full results | Retry queue, support contact |
 

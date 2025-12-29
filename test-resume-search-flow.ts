@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import { searchJobs } from './lib/adzuna';
+import { searchJobs } from './lib/job-search';
 import { ParsedResume } from './lib/types';
 
 // Load environment variables

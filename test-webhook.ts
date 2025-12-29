@@ -5,7 +5,7 @@
 
 import dotenv from 'dotenv';
 import { sessionStorage } from './lib/storage';
-import { searchJobs } from './lib/adzuna';
+import { searchJobs } from './lib/job-search';
 import { ParsedResume } from './lib/types';
 import { randomUUID } from 'crypto';
 

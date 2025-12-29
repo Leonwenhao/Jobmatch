@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { constructWebhookEvent } from '@/lib/stripe';
 import { sessionStorage } from '@/lib/storage';
-import { searchJobs } from '@/lib/adzuna';
+import { searchJobs } from '@/lib/job-search';
 import { sendJobEmail } from '@/lib/resend';
 import Stripe from 'stripe';
 
