@@ -18,7 +18,7 @@ export interface Job {
   url: string;
   salary?: string;
   description?: string;
-  source: 'Ashby' | 'Greenhouse' | 'Lever' | 'Workable' | 'Paylocity' | 'SmartRecruiters' | 'Job Board';
+  source: 'Ashby' | 'Greenhouse' | 'Lever' | 'Workable' | 'Paylocity' | 'SmartRecruiters' | 'JobScore' | 'Job Board';
 }
 
 export interface Session {

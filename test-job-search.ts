@@ -22,29 +22,33 @@ const sampleParsedResume: ParsedResume = {
 };
 
 async function testJobSearch() {
-  console.log('🧪 Testing Job Search\n');
+  console.log('🧪 Testing Job Search (Google Custom Search API)\n');
   console.log('='.repeat(60));
 
   // Test 1: Query builder
   console.log('\n1. Testing query builder...');
-  const searchQuery = buildSearchQuery(sampleParsedResume);
+  const jobTitle = sampleParsedResume.jobTitles[0];
+  const location = extractLocation(sampleParsedResume);
+  const searchQuery = buildSearchQuery(jobTitle, location);
+  console.log(`   ✓ Job title: "${jobTitle}"`);
+  console.log(`   ✓ Location: "${location}"`);
   console.log(`   ✓ Search query: "${searchQuery}"`);
 
-  // Test 2: Location extraction
-  console.log('\n2. Testing location extraction...');
-  const location = extractLocation(sampleParsedResume);
-  console.log(`   ✓ Location: "${location}"`);
-
-  // Test 3: Serper API credentials
-  console.log('\n3. Checking Serper API credentials...');
-  if (!process.env.SERPER_API_KEY) {
-    console.error('   ✗ SERPER_API_KEY not set!');
+  // Test 2: Google API credentials
+  console.log('\n2. Checking Google API credentials...');
+  if (!process.env.GOOGLE_API_KEY) {
+    console.error('   ✗ GOOGLE_API_KEY not set!');
     process.exit(1);
   }
-  console.log(`   ✓ Serper API Key: ${process.env.SERPER_API_KEY.substring(0, 8)}...`);
+  if (!process.env.GOOGLE_SEARCH_ENGINE_ID) {
+    console.error('   ✗ GOOGLE_SEARCH_ENGINE_ID not set!');
+    process.exit(1);
+  }
+  console.log(`   ✓ Google API Key: ${process.env.GOOGLE_API_KEY.substring(0, 8)}...`);
+  console.log(`   ✓ Search Engine ID: ${process.env.GOOGLE_SEARCH_ENGINE_ID.substring(0, 8)}...`);
 
-  // Test 4: Search for jobs
-  console.log('\n4. Searching for jobs...');
+  // Test 3: Search for jobs
+  console.log('\n3. Searching for jobs...');
   try {
     const jobs = await searchJobs(sampleParsedResume, 25);
     console.log(`   ✓ Search: SUCCESS`);
@@ -59,6 +63,7 @@ async function testJobSearch() {
         console.log(`\n${index + 1}. ${job.title}`);
         console.log(`   🏢 ${job.company}`);
         console.log(`   📍 ${job.location}`);
+        console.log(`   📌 ${job.source}`);
         if (job.salary) {
           console.log(`   💰 ${job.salary}`);
         }
@@ -86,9 +91,9 @@ async function testJobSearch() {
   }
 }
 
-// Test 5: Empty resume handling
+// Test 4: Empty resume handling
 async function testEmptyResume() {
-  console.log('\n\n5. Testing empty resume handling...');
+  console.log('\n\n4. Testing empty resume handling...');
   const emptyResume: ParsedResume = {
     jobTitles: [],
     skills: [],
@@ -99,11 +104,11 @@ async function testEmptyResume() {
     jobTypes: [],
   };
 
-  const query = buildSearchQuery(emptyResume);
   const location = extractLocation(emptyResume);
+  const query = buildSearchQuery('developer', location); // Fallback job title
 
-  console.log(`   ✓ Empty query: "${query}"`);
-  console.log(`   ✓ Default location: "${location}"`);
+  console.log(`   ✓ Location (null resume): "${location}"`);
+  console.log(`   ✓ Query with fallback title: "${query}"`);
 }
 
 // Run all tests
