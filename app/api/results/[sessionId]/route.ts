@@ -26,6 +26,34 @@ export async function GET(
     // Get session data from Redis
     let session = await getSession(sessionId);
 
+    // FALLBACK FIX: If session exists but has no jobs, run the job search now
+    if (session && (!session.jobs || session.jobs.length === 0) && session.parsedResume) {
+      console.log(`Session ${sessionId} found but has no jobs - running job search now...`);
+
+      try {
+        const jobs = await searchJobs(session.parsedResume, 25);
+        console.log(`Fallback search found ${jobs.length} jobs for session ${sessionId}`);
+
+        session.jobs = jobs;
+        session.status = 'complete';
+        await setSession(sessionId, session);
+
+        // Send email if we have enough jobs
+        if (jobs.length > 5 && session.email) {
+          const emailJobs = jobs.slice(5);
+          console.log(`Sending ${emailJobs.length} jobs via email to ${session.email}`);
+          try {
+            await sendJobEmail(session.email, emailJobs);
+          } catch (emailError) {
+            console.error(`Email sending error:`, emailError);
+          }
+        }
+      } catch (searchError) {
+        console.error(`Fallback search failed for ${sessionId}:`, searchError);
+        // Continue anyway - will return empty jobs
+      }
+    }
+
     // If session not in Redis, try Stripe metadata as backup
     if (!session) {
       console.log(`Session ${sessionId} not in Redis, checking Stripe...`);
