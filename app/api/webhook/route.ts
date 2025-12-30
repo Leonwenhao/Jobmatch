@@ -106,6 +106,19 @@ export async function POST(request: NextRequest) {
           throw new Error('No parsed resume found in session');
         }
 
+        // CRITICAL LOGGING: Track parsedResume data to diagnose search issues
+        console.log('=== PARSED RESUME DEBUG ===');
+        console.log(`Session ${sessionId} parsedResume:`, JSON.stringify(session.parsedResume, null, 2));
+        console.log(`Job titles count: ${session.parsedResume.jobTitles?.length || 0}`);
+        console.log(`Job titles: ${JSON.stringify(session.parsedResume.jobTitles)}`);
+        console.log(`Skills count: ${session.parsedResume.skills?.length || 0}`);
+        console.log(`Location: ${session.parsedResume.location || 'not set'}`);
+
+        // Warn if jobTitles is empty (this is the root cause of "No matches found")
+        if (!session.parsedResume.jobTitles || session.parsedResume.jobTitles.length === 0) {
+          console.warn('⚠️ WARNING: parsedResume has no job titles - fallback search will be used');
+        }
+
         console.log(`Searching for jobs for session ${sessionId}`);
 
         // Search for jobs using parsed resume

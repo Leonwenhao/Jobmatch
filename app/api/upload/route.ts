@@ -55,7 +55,20 @@ export async function POST(request: NextRequest) {
     try {
       console.log('Parsing resume with Claude API...');
       parsedResume = await parseResumePDF(base64PDF);
-      console.log('Resume parsed successfully:', parsedResume);
+      console.log('Resume parsed successfully:', JSON.stringify(parsedResume, null, 2));
+
+      // Enhanced logging for diagnostics
+      console.log('=== PARSED RESUME VALIDATION ===');
+      console.log(`Job titles extracted: ${parsedResume.jobTitles?.length || 0}`);
+      console.log(`Job titles: ${JSON.stringify(parsedResume.jobTitles)}`);
+      console.log(`Skills: ${parsedResume.skills?.length || 0}`);
+      console.log(`Location: ${parsedResume.location || 'not extracted'}`);
+
+      // Warn if no job titles found (will use fallback search)
+      if (!parsedResume.jobTitles || parsedResume.jobTitles.length === 0) {
+        console.warn('⚠️ No job titles extracted from resume - fallback search will be used');
+        // Don't fail here - the job search has fallback logic
+      }
     } catch (parseError) {
       console.error('Resume parsing error:', parseError);
       return NextResponse.json(

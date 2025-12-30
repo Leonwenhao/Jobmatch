@@ -294,6 +294,50 @@ async function performFallbackSearch(
 }
 
 /**
+ * Generate fallback search terms when no job titles are available
+ * Uses skills and industries to construct broader searches
+ */
+function generateFallbackSearchTerms(parsedResume: ParsedResume): string[] {
+  const fallbackTerms: string[] = [];
+
+  // Try to construct job titles from skills
+  const techSkills = parsedResume.skills?.filter(skill =>
+    /javascript|python|java|react|node|typescript|sql|aws|docker|kubernetes|golang|rust|c\+\+|c#/i.test(skill)
+  ) || [];
+
+  if (techSkills.length > 0) {
+    fallbackTerms.push(`${techSkills[0]} Developer`);
+    if (techSkills.length > 1) {
+      fallbackTerms.push(`${techSkills[1]} Engineer`);
+    }
+  }
+
+  // Use industries as search terms
+  if (parsedResume.industries?.length > 0) {
+    const industry = parsedResume.industries[0];
+    fallbackTerms.push(`${industry} Specialist`);
+  }
+
+  // Add generic fallback based on experience level
+  if (parsedResume.yearsExperience !== null) {
+    if (parsedResume.yearsExperience >= 7) {
+      fallbackTerms.push('Senior Software Engineer');
+    } else if (parsedResume.yearsExperience >= 3) {
+      fallbackTerms.push('Software Engineer');
+    } else {
+      fallbackTerms.push('Junior Developer');
+    }
+  }
+
+  // Ultimate fallback
+  if (fallbackTerms.length === 0) {
+    fallbackTerms.push('Software Engineer', 'Developer', 'Engineer');
+  }
+
+  return fallbackTerms.slice(0, 3);
+}
+
+/**
  * Search for jobs using Google Custom Search API
  * Runs parallel queries for multiple job titles to maximize results
  */
@@ -307,12 +351,14 @@ export async function searchJobs(
   console.log('Parsed Resume:', JSON.stringify(parsedResume, null, 2));
 
   // Get top 3 job titles from resume
-  const jobTitles = parsedResume.jobTitles?.slice(0, 3) || [];
+  let jobTitles = parsedResume.jobTitles?.slice(0, 3) || [];
   const location = extractLocation(parsedResume);
 
+  // CRITICAL FIX: If no job titles found, use fallback search terms
   if (jobTitles.length === 0) {
-    console.warn('No job titles found in resume');
-    return [];
+    console.warn('No job titles found in resume - using fallback search terms');
+    jobTitles = generateFallbackSearchTerms(parsedResume);
+    console.log('Generated fallback job titles:', jobTitles);
   }
 
   console.log('Job titles to search:', jobTitles);

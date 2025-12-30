@@ -128,19 +128,25 @@ export async function parseResumePDF(base64PDF: string): Promise<ParsedResume> {
 
   const anthropic = getAnthropicClient();
 
-  const prompt = `You are a resume parser. Extract the following information from this resume PDF:
+  const prompt = `You are a resume parser. Extract job search criteria from this resume PDF.
 
-1. Job titles/roles the person has held
-2. Skills (technical and soft)
-3. Years of experience (total)
-4. Current location or stated location preference
-5. Industries they've worked in
+IMPORTANT: Focus on extracting job titles - these are CRITICAL for the job search.
+
+1. Job titles/roles - Extract ALL job titles held by this person. Include:
+   - Current and past job titles (e.g., "Software Engineer", "Product Manager")
+   - If no explicit titles, infer from responsibilities (e.g., someone who "managed a team of developers" is likely a "Engineering Manager")
+   - Include at least 2-3 job titles if possible
+
+2. Skills (technical and soft skills)
+3. Years of experience (calculate from work history dates)
+4. Location (city, state or "Remote" if mentioned)
+5. Industries worked in
 6. Education level and field
-7. Job type preferences (if stated): full-time, part-time, contract, remote
+7. Job type preferences (full-time, part-time, contract, remote)
 
 Return ONLY a JSON object with this exact structure:
 {
-  "jobTitles": ["Title 1", "Title 2"],
+  "jobTitles": ["Title 1", "Title 2", "Title 3"],
   "skills": ["Skill 1", "Skill 2"],
   "yearsExperience": 5,
   "location": "City, State",
@@ -149,7 +155,9 @@ Return ONLY a JSON object with this exact structure:
   "jobTypes": ["full-time", "remote"]
 }
 
-If information is not available, use null or empty array. Do not include any other text besides the JSON.`;
+CRITICAL: The jobTitles array must NOT be empty. If you cannot find explicit job titles, infer them from the resume content (e.g., from responsibilities, skills, or job descriptions).
+
+If other information is not available, use null or empty array. Do not include any other text besides the JSON.`;
 
   try {
     const message = await anthropic.messages.create({
