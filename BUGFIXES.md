@@ -2,6 +2,67 @@
 
 ## Post-Deployment Bug Fixes
 
+### Issue #7: No Matches Found - Webhook Not Configured
+**Date:** 2025-12-29
+**Severity:** Critical (P0)
+**Status:** ✅ Fixed
+
+#### Problem:
+After successful payment, users see "No Matches Found" even though payment completed successfully.
+
+#### Root Causes (Multiple):
+1. **No Stripe webhook configured** - Webhook was never created in Stripe Dashboard
+2. **Wrong Stripe mode** - Webhook created in Live mode but using Test API keys
+3. **Wrong Stripe account** - App using keys from Account A, webhook in Account B
+4. **No fallback in results endpoint** - If webhook failed, results returned empty
+
+#### Symptoms:
+- Payment shows in Stripe Dashboard ✅
+- No webhook delivery attempts in Stripe
+- Session status stays "pending" (never updated to "complete")
+- Results endpoint returns `{ jobs: [], status: "pending" }`
+
+#### Solution:
+
+1. **Created webhook in correct Stripe mode:**
+   - Test mode webhook for test API keys
+   - Endpoint: `https://jobmatch-mu.vercel.app/api/webhook`
+   - Event: `checkout.session.completed`
+
+2. **Fixed Stripe API keys:**
+   - Updated `STRIPE_SECRET_KEY` to match the correct account
+   - Updated `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` to match
+   - Updated `STRIPE_WEBHOOK_SECRET` to the test mode signing secret
+
+3. **Added fallback in results endpoint:**
+   ```typescript
+   // If session exists but has no jobs, run search on-demand
+   if (session && (!session.jobs || session.jobs.length === 0) && session.parsedResume) {
+     const jobs = await searchJobs(session.parsedResume, 25);
+     session.jobs = jobs;
+     session.status = 'complete';
+     await setSession(sessionId, session);
+   }
+   ```
+
+#### Key Learnings:
+- **Stripe Test mode and Live mode have SEPARATE webhooks**
+- Always verify API key prefix matches Stripe account (e.g., `51SjrDLH...`)
+- Check webhook delivery attempts in Stripe Dashboard FIRST
+- "No matches found" usually means webhook issue, not search issue
+
+#### Files Modified:
+- `app/api/results/[sessionId]/route.ts` - Added fallback search logic
+- `.env.local` - Updated Stripe keys
+- Vercel environment variables - Updated all Stripe keys
+
+#### Documentation:
+- See `docs/POST-MORTEM-2025-12-29.md` for full analysis
+- Updated `DEPLOYMENT.md` with webhook troubleshooting
+- Updated `CLAUDE.md` with debugging notes
+
+---
+
 ### Issue #6: No Jobs Found - Empty Adzuna Results
 **Date:** 2025-12-28
 **Severity:** Critical (P0)

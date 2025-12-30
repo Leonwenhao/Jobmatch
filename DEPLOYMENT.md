@@ -60,16 +60,39 @@ NEXT_PUBLIC_APP_URL=https://your-domain.com
 
 ### 4. Set Up Stripe Webhook
 
-**Important:** You must configure the Stripe webhook for payments to work.
+> **CRITICAL:** The app will NOT work without a properly configured webhook. This is the #1 cause of "No matches found" errors.
+
+#### Test Mode vs Live Mode Webhooks
+
+**Stripe has SEPARATE webhooks for Test mode and Live mode.** You must create a webhook in the same mode as your API keys.
+
+- If using `sk_test_...` keys → Create webhook in **Test mode**
+- If using `sk_live_...` keys → Create webhook in **Live mode**
+
+Toggle the mode in the top-right corner of Stripe Dashboard.
+
+#### Webhook Setup Steps
 
 1. Go to Stripe Dashboard → Developers → Webhooks
-2. Click "Add endpoint"
-3. Set endpoint URL to: `https://your-domain.com/api/webhook`
-4. Select events to listen for:
+2. **Verify you're in the correct mode** (Test or Live) - check the toggle in top-right
+3. Click "Add endpoint"
+4. Set endpoint URL to: `https://your-domain.com/api/webhook`
+5. Select events to listen for:
    - `checkout.session.completed`
-5. Copy the webhook signing secret (`whsec_...`)
-6. Update `STRIPE_WEBHOOK_SECRET` in Vercel environment variables
-7. Redeploy the app for changes to take effect
+6. Click "Add endpoint"
+7. Copy the webhook signing secret (`whsec_...`)
+8. Update `STRIPE_WEBHOOK_SECRET` in Vercel environment variables
+9. **Redeploy the app** for changes to take effect
+
+#### Verify Webhook is Working
+
+After a test payment:
+1. Go to Stripe Dashboard → Webhooks → Your endpoint
+2. Check "Recent deliveries" - should show HTTP 200 response
+3. If no deliveries appear, verify:
+   - You're in the correct mode (Test/Live)
+   - The endpoint URL is correct
+   - API keys match the Stripe account
 
 ### 5. Configure Resend Domain (Optional but Recommended)
 
@@ -119,9 +142,25 @@ For production, you should verify a domain in Resend:
 
 ## Troubleshooting
 
+### "No Matches Found" After Payment
+This is usually a **webhook configuration issue**, not a search issue.
+
+**Check in this order:**
+1. **Stripe webhook exists?** → Dashboard → Developers → Webhooks
+2. **Correct mode?** → Test mode webhook for test keys, Live mode for live keys
+3. **Correct account?** → API key prefix should match (e.g., `51SjrDLH...`)
+4. **Webhook receiving events?** → Check "Recent deliveries" in webhook details
+5. **HTTP 200 response?** → If not, check Vercel function logs
+
+**Quick test:** Use the debug endpoint:
+```
+https://your-domain.com/api/debug-search?sessionId=YOUR_SESSION_ID
+```
+
 ### Payment not processing
 - Check Stripe webhook is configured correctly
 - Verify `STRIPE_WEBHOOK_SECRET` matches Stripe dashboard
+- **Ensure webhook is in the same mode as your API keys (Test/Live)**
 - Check Vercel function logs for errors
 
 ### Email not sending
@@ -133,9 +172,10 @@ For production, you should verify a domain in Resend:
 - Check `ANTHROPIC_API_KEY` is valid and has credits
 - View Vercel function logs for Claude API errors
 
-### No jobs found
-- Verify `ADZUNA_APP_ID` and `ADZUNA_APP_KEY` are correct
-- Check Adzuna API limits (250 requests/day on free tier)
+### No jobs found (after webhook is verified)
+- Verify `GOOGLE_API_KEY` and `GOOGLE_SEARCH_ENGINE_ID` are correct
+- Test with debug endpoint: `/api/debug-search?test=true`
+- Check Vercel function logs for search errors
 
 ---
 
