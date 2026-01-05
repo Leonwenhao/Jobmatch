@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import JobList from '@/components/JobList';
 import { Job } from '@/lib/types';
@@ -23,10 +23,27 @@ export default function ResultsPage() {
   const [error, setError] = useState<string | null>(null);
   const [pollingCount, setPollingCount] = useState(0);
 
+  // Use refs to track state without causing re-renders
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollCountRef = useRef(0);
+  const shouldStopPollingRef = useRef(false);
+
+  const stopPolling = useCallback(() => {
+    shouldStopPollingRef.current = true;
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+  }, []);
+
   useEffect(() => {
-    let pollInterval: NodeJS.Timeout | null = null;
+    const maxPolls = 30; // 60 seconds max (30 polls * 2 seconds)
+    shouldStopPollingRef.current = false;
+    pollCountRef.current = 0;
 
     const fetchResults = async () => {
+      if (shouldStopPollingRef.current) return;
+
       try {
         const response = await fetch(`/api/results/${sessionId}`);
 
@@ -39,54 +56,56 @@ export default function ResultsPage() {
         }
 
         const data: ResultsResponse = await response.json();
+        if (shouldStopPollingRef.current) return;
+
         setResults(data);
         setIsLoading(false);
 
-        // If still processing, continue polling
-        if (data.status === 'processing' || data.status === 'paid') {
-          setPollingCount((prev) => prev + 1);
-          // Poll every 2 seconds for up to 60 seconds
-          if (pollingCount < 30) {
-            return; // Continue polling
-          }
-        } else if (data.status === 'complete') {
-          // Stop polling when complete
-          if (pollInterval) {
-            clearInterval(pollInterval);
-          }
-        } else if (data.status === 'failed') {
-          setError('We encountered an error processing your resume. Please contact support.');
-          if (pollInterval) {
-            clearInterval(pollInterval);
+        // Stop polling when complete or failed
+        if (data.status === 'complete' || data.status === 'failed') {
+          stopPolling();
+          if (data.status === 'failed') {
+            setError('We encountered an error processing your resume. Please contact support.');
           }
         }
       } catch (err) {
+        if (shouldStopPollingRef.current) return;
         console.error('Error fetching results:', err);
         setError(err instanceof Error ? err.message : 'Failed to load job results');
         setIsLoading(false);
-        if (pollInterval) {
-          clearInterval(pollInterval);
-        }
+        stopPolling();
       }
     };
 
     // Initial fetch
     fetchResults();
 
-    // Set up polling for processing status
-    pollInterval = setInterval(() => {
-      if (results?.status === 'processing' || results?.status === 'paid' || !results) {
-        fetchResults();
+    // Set up polling
+    pollIntervalRef.current = setInterval(() => {
+      if (shouldStopPollingRef.current) {
+        stopPolling();
+        return;
       }
+
+      pollCountRef.current++;
+      setPollingCount(pollCountRef.current);
+
+      // Stop polling after maxPolls attempts (60 seconds)
+      if (pollCountRef.current >= maxPolls) {
+        console.log('Max polling attempts reached, stopping');
+        stopPolling();
+        setError('Processing is taking longer than expected. Please refresh the page or contact support.');
+        return;
+      }
+
+      fetchResults();
     }, 2000);
 
     // Cleanup
     return () => {
-      if (pollInterval) {
-        clearInterval(pollInterval);
-      }
+      stopPolling();
     };
-  }, [sessionId, results?.status, pollingCount]);
+  }, [sessionId, stopPolling]);
 
   // Loading state - processing
   if (isLoading || results?.status === 'processing' || results?.status === 'paid') {
@@ -194,11 +213,11 @@ export default function ResultsPage() {
             Your Job Matches Are Ready!
           </h1>
           <p className="text-lg md:text-xl text-gray-700 mb-2">
-            Here are the top {results!.jobs.length} jobs matched to your resume
+            Here are your {results!.jobs.length} job matches
           </p>
-          {results!.totalJobs > 5 && (
+          {results!.email && (
             <p className="text-sm md:text-base text-gray-600">
-              We're sending {results!.totalJobs - 5} more jobs to <span className="font-medium">{results!.email}</span>
+              We've also sent a copy to <span className="font-medium">{results!.email}</span>
             </p>
           )}
         </div>
@@ -208,17 +227,17 @@ export default function ResultsPage() {
           <JobList jobs={results!.jobs} />
         </div>
 
-        {/* Email Notice */}
-        {results!.totalJobs > 5 && (
-          <div className="max-w-4xl mx-auto mt-8 bg-white border-2 border-blue-200 rounded-lg p-6 shadow-md">
+        {/* Email Receipt Notice */}
+        {results!.email && (
+          <div className="max-w-4xl mx-auto mt-8 bg-white border-2 border-green-200 rounded-lg p-6 shadow-md">
             <div className="flex items-start gap-4">
               <span className="text-3xl md:text-4xl flex-shrink-0">📧</span>
               <div>
                 <h3 className="font-semibold text-gray-900 mb-2 text-lg">
-                  More Jobs Coming to Your Inbox!
+                  Email Receipt Sent!
                 </h3>
                 <p className="text-gray-700 text-sm md:text-base mb-3">
-                  We're sending {results!.totalJobs - 5} additional job matches to your email. They should arrive within the next 15-30 minutes.
+                  We've emailed a copy of all {results!.jobs.length} job matches to you for easy reference.
                 </p>
                 <p className="text-xs md:text-sm text-gray-600">
                   Check your spam folder if you don't see it. Email sent to: <span className="font-medium">{results!.email}</span>

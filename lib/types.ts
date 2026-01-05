@@ -29,6 +29,8 @@ export interface Session {
   jobs?: Job[];
   status: 'pending' | 'paid' | 'processing' | 'complete' | 'failed';
   createdAt: Date;
+  emailSent?: boolean; // Track if email was already sent to prevent duplicates
+  stripeEventId?: string; // Track processed Stripe events for idempotency
 }
 
 export interface UploadResponse {

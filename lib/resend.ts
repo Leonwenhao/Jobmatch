@@ -16,6 +16,16 @@ function getResendClient(): Resend {
 }
 
 /**
+ * Validate email format
+ */
+function isValidEmail(email: string): boolean {
+  if (!email || typeof email !== 'string') return false;
+  // Basic email validation regex
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email.trim());
+}
+
+/**
  * Generate HTML email template for job listings
  */
 function generateJobEmailHTML(jobs: Job[]): string {
@@ -119,7 +129,7 @@ function generateJobEmailHTML(jobs: Job[]): string {
   <div class="container">
     <div class="header">
       <h1>🎯 Your Job Matches Are Ready!</h1>
-      <p>Here are ${jobs.length} more jobs matched to your resume</p>
+      <p>Here are all ${jobs.length} jobs matched to your resume</p>
     </div>
 
     ${jobs.map((job, index) => `
@@ -169,6 +179,24 @@ export async function sendJobEmail(
   jobs: Job[],
   retries: number = 3
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  // Validate email before attempting to send
+  if (!isValidEmail(to)) {
+    console.error(`Invalid email address: "${to}"`);
+    return {
+      success: false,
+      error: `Invalid email address format: "${to}"`,
+    };
+  }
+
+  // Validate jobs array
+  if (!jobs || jobs.length === 0) {
+    console.error('No jobs to send');
+    return {
+      success: false,
+      error: 'No jobs to send in email',
+    };
+  }
+
   const resend = getResendClient();
 
   // Generate HTML content
@@ -180,9 +208,9 @@ export async function sendJobEmail(
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const { data, error } = await resend.emails.send({
-        from: 'JobMatch <onboarding@resend.dev>',
+        from: 'JobMatch <jobs@doloresresearch.com>',
         to: [to],
-        subject: `Your ${jobs.length} Job Matches Are Ready 🎯`,
+        subject: `Your JobMatch Results - ${jobs.length} Jobs Found 🎯`,
         html: html,
       });
 

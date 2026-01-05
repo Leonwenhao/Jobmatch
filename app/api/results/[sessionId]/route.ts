@@ -38,15 +38,25 @@ export async function GET(
         session.status = 'complete';
         await setSession(sessionId, session);
 
-        // Send email if we have enough jobs
-        if (jobs.length > 5 && session.email) {
-          const emailJobs = jobs.slice(5);
-          console.log(`Sending ${emailJobs.length} jobs via email to ${session.email}`);
+        // Send email with ALL jobs as receipt/backup (only if not already sent)
+        if (jobs.length > 0 && session.email && !session.emailSent) {
+          console.log(`Sending all ${jobs.length} jobs via email to ${session.email} as receipt (fallback)`);
           try {
-            await sendJobEmail(session.email, emailJobs);
+            const emailResult = await sendJobEmail(session.email, jobs);
+            if (emailResult.success) {
+              console.log(`Email receipt sent successfully to ${session.email}`);
+              session.emailSent = true;
+              await setSession(sessionId, session); // Update emailSent flag
+            } else {
+              console.error(`Email delivery failed:`, emailResult.error);
+            }
           } catch (emailError) {
             console.error(`Email sending error:`, emailError);
           }
+        } else if (session.emailSent) {
+          console.log(`Email already sent for session ${sessionId}, skipping duplicate`);
+        } else if (!session.email) {
+          console.warn(`No email address for session ${sessionId} - skipping email`);
         }
       } catch (searchError) {
         console.error(`Fallback search failed for ${sessionId}:`, searchError);
@@ -87,21 +97,24 @@ export async function GET(
         // Store in Redis for future requests
         await setSession(sessionId, session);
 
-        // Send email if not already sent
-        if (jobs.length > 5 && stripeData.email) {
-          const emailJobs = jobs.slice(5);
-          console.log(`Sending ${emailJobs.length} jobs via email to ${stripeData.email}`);
+        // Send email with ALL jobs as receipt/backup
+        if (jobs.length > 0 && stripeData.email) {
+          console.log(`Sending all ${jobs.length} jobs via email to ${stripeData.email} as receipt (Stripe fallback)`);
 
           try {
-            const emailResult = await sendJobEmail(stripeData.email, emailJobs);
+            const emailResult = await sendJobEmail(stripeData.email, jobs);
             if (emailResult.success) {
-              console.log(`Email sent successfully to ${stripeData.email}`);
+              console.log(`Email receipt sent successfully to ${stripeData.email}`);
+              session.emailSent = true;
+              await setSession(sessionId, session); // Update emailSent flag
             } else {
               console.error(`Email delivery failed:`, emailResult.error);
             }
           } catch (emailError) {
             console.error(`Email sending error:`, emailError);
           }
+        } else if (!stripeData.email) {
+          console.warn(`No email address from Stripe for session ${sessionId} - skipping email`);
         }
 
       } catch (searchError) {
@@ -113,10 +126,10 @@ export async function GET(
       }
     }
 
-    // Return session status and jobs
+    // Return session status and ALL jobs (user sees all 25 on results page)
     return NextResponse.json({
       status: session.status,
-      jobs: session.jobs?.slice(0, 5) || [], // Return first 5 jobs for results page
+      jobs: session.jobs || [], // Return ALL jobs for results page
       email: session.email,
       totalJobs: session.jobs?.length || 0,
     });

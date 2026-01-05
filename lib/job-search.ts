@@ -1,215 +1,115 @@
 import crypto from 'crypto';
 import { ParsedResume, Job } from './types';
 
-// Job boards to search via Google Custom Search
-const JOB_BOARD_SITES = [
-  // Tech-focused
-  'jobs.ashbyhq.com',
-  'boards.greenhouse.io',
-  'jobs.lever.co',
-  'jobs.workable.com',
-  // General/non-tech
-  'recruiting.paylocity.com',
-  'jobs.smartrecruiters.com',
-  'careers.jobscore.com',
-  'apply.workable.com',
-];
+// SearchAPI.io Google Jobs API
+const SEARCHAPI_URL = 'https://www.searchapi.io/api/v1/search';
 
-// Google Custom Search API configuration
-const GOOGLE_CSE_API_URL = 'https://www.googleapis.com/customsearch/v1';
-
-function getGoogleCredentials() {
-  const apiKey = process.env.GOOGLE_API_KEY?.trim();
-  const searchEngineId = process.env.GOOGLE_SEARCH_ENGINE_ID?.trim();
-
+function getSearchAPIKey(): string {
+  const apiKey = process.env.SEARCHAPI_API_KEY?.trim();
   if (!apiKey) {
-    throw new Error('GOOGLE_API_KEY is not configured');
+    throw new Error('SEARCHAPI_API_KEY is not configured');
   }
-
-  if (!searchEngineId) {
-    throw new Error('GOOGLE_SEARCH_ENGINE_ID is not configured');
-  }
-
-  return { apiKey, searchEngineId };
+  return apiKey;
 }
 
-interface GoogleSearchItem {
+// SearchAPI.io response types
+interface SearchAPIJob {
   title: string;
-  link: string;
-  snippet: string;
-}
-
-interface GoogleSearchResponse {
-  items?: GoogleSearchItem[];
-  searchInformation?: {
-    totalResults: string;
+  company_name: string;
+  location: string;
+  description?: string;
+  detected_extensions?: {
+    posted_at?: string;
+    schedule_type?: string;
+    salary?: string;
   };
-  error?: {
-    message: string;
-    code: number;
+  apply_options?: Array<{
+    title: string;
+    link: string;
+  }>;
+  apply_link?: string;
+  job_id?: string;
+  share_link?: string;
+  related_links?: Array<{
+    link: string;
+    text: string;
+  }>;
+}
+
+interface SearchAPIResponse {
+  search_metadata?: {
+    id: string;
+    status: string;
+    created_at: string;
   };
+  search_parameters?: {
+    q: string;
+    engine: string;
+  };
+  jobs?: SearchAPIJob[];
+  pagination?: {
+    next_page_token?: string;
+  };
+  error?: string;
 }
 
 /**
- * Build site operators string for Google search
+ * Generate unique job ID from URL or title+company
  */
-function buildSiteOperators(): string {
-  return JOB_BOARD_SITES.map(site => `site:${site}`).join(' OR ');
-}
-
-/**
- * Build Google search query with site operators, job title, and location
- * Format: (site:X OR site:Y) "job title" "location"
- */
-export function buildSearchQuery(jobTitle: string, location: string | null): string {
-  const sitePart = buildSiteOperators();
-  const parts = [`(${sitePart})`, `"${jobTitle}"`];
-
-  if (location) {
-    parts.push(`"${location}"`);
-  }
-
-  return parts.join(' ');
-}
-
-/**
- * Build a broader fallback query (no location, simpler title)
- */
-function buildFallbackQuery(jobTitle: string): string {
-  const sitePart = buildSiteOperators();
-  // Use simpler job title (first word or two)
-  const simplifiedTitle = jobTitle.split(' ').slice(0, 2).join(' ');
-  return `(${sitePart}) "${simplifiedTitle}"`;
-}
-
-/**
- * Extract location string from parsed resume
- */
-export function extractLocation(parsedResume: ParsedResume): string | null {
-  return parsedResume.location || null;
-}
-
-/**
- * Generate unique job ID from URL using MD5 hash
- */
-function generateJobId(url: string): string {
+function generateJobId(url: string, title: string, company: string): string {
+  const input = url || `${title}-${company}`;
   return crypto
     .createHash('md5')
-    .update(url)
+    .update(input)
     .digest('hex')
     .substring(0, 12);
 }
 
 /**
- * Extract job title from Google result title
- * Removes company suffix like " - Company Name" or " | Company"
+ * Extract the best apply link from job data
  */
-function extractJobTitle(title: string): string {
-  const cleaned = title
-    .replace(/\s*[-–|]\s*.+$/, '') // Remove everything after dash/pipe
-    .replace(/\s+at\s+.+$/i, '')    // Remove "at Company"
-    .trim();
+function extractApplyLink(job: SearchAPIJob): string {
+  if (job.apply_link) {
+    return job.apply_link;
+  }
 
-  return cleaned || title;
+  if (job.apply_options && job.apply_options.length > 0) {
+    const directLink = job.apply_options.find(opt =>
+      !opt.link.includes('indeed.com') &&
+      !opt.link.includes('linkedin.com') &&
+      !opt.link.includes('glassdoor.com')
+    );
+    if (directLink) return directLink.link;
+    return job.apply_options[0].link;
+  }
+
+  if (job.related_links && job.related_links.length > 0) {
+    const applyLink = job.related_links.find(link =>
+      link.text?.toLowerCase().includes('apply') ||
+      link.link.includes('careers') ||
+      link.link.includes('jobs')
+    );
+    if (applyLink) return applyLink.link;
+    return job.related_links[0].link;
+  }
+
+  if (job.share_link) return job.share_link;
+
+  return `https://www.google.com/search?q=${encodeURIComponent(job.title + ' ' + job.company_name + ' careers')}`;
 }
 
 /**
- * Extract company name from URL or title
- */
-function extractCompanyName(title: string, url: string): string {
-  // Try to extract from URL first
-  const urlMatch = url.match(/(?:jobs\.|boards\.|recruiting\.|careers\.|apply\.)([^.]+)/);
-  if (urlMatch && urlMatch[1]) {
-    return urlMatch[1].charAt(0).toUpperCase() + urlMatch[1].slice(1);
-  }
-
-  // Fall back to parsing title
-  const atMatch = title.match(/\bat\s+(.+?)(?:\s*[-|]|$)/i);
-  if (atMatch && atMatch[1]) {
-    return atMatch[1].trim();
-  }
-
-  const dashMatch = title.match(/[-–]\s*(.+?)(?:\s*[-|]|$)/);
-  if (dashMatch && dashMatch[1]) {
-    return dashMatch[1].trim();
-  }
-
-  // Last resort: use domain name
-  try {
-    const hostname = new URL(url).hostname;
-    const domain = hostname
-      .replace('jobs.', '')
-      .replace('boards.', '')
-      .replace('recruiting.', '')
-      .replace('careers.', '')
-      .replace('apply.', '');
-    const name = domain.split('.')[0];
-    return name.charAt(0).toUpperCase() + name.slice(1);
-  } catch {
-    return 'Unknown Company';
-  }
-}
-
-/**
- * Extract location from snippet or title
- */
-function extractLocationFromResult(snippet: string, title: string): string {
-  const patterns = [
-    /(?:in|at)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*,\s*[A-Z]{2})/,
-    /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*,\s*[A-Z]{2})\s*[-|]/,
-    /Location:\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*,?\s*[A-Z]{2})/i,
-  ];
-
-  for (const pattern of patterns) {
-    const match = snippet.match(pattern);
-    if (match && match[1]) {
-      return match[1].trim();
-    }
-  }
-
-  for (const pattern of patterns) {
-    const match = title.match(pattern);
-    if (match && match[1]) {
-      return match[1].trim();
-    }
-  }
-
-  return 'Remote';
-}
-
-/**
- * Extract salary from snippet if available
- */
-function extractSalary(snippet: string): string | undefined {
-  const patterns = [
-    /\$[\d,]+k?\s*-\s*\$[\d,]+k?/i,
-    /\$[\d,]+(?:,\d{3})*\s*-\s*\$[\d,]+(?:,\d{3})*/i,
-    /salary:?\s*\$[\d,]+k?/i,
-  ];
-
-  for (const pattern of patterns) {
-    const match = snippet.match(pattern);
-    if (match) {
-      return match[0].trim();
-    }
-  }
-
-  return undefined;
-}
-
-/**
- * Extract source (job board name) from URL
+ * Determine job source from apply link
  */
 function extractSource(url: string): Job['source'] {
   const sourceMap: Record<string, Job['source']> = {
-    'jobs.ashbyhq.com': 'Ashby',
-    'boards.greenhouse.io': 'Greenhouse',
-    'jobs.lever.co': 'Lever',
-    'jobs.workable.com': 'Workable',
-    'apply.workable.com': 'Workable',
-    'recruiting.paylocity.com': 'Paylocity',
-    'jobs.smartrecruiters.com': 'SmartRecruiters',
-    'careers.jobscore.com': 'JobScore',
+    'ashbyhq.com': 'Ashby',
+    'greenhouse.io': 'Greenhouse',
+    'lever.co': 'Lever',
+    'workable.com': 'Workable',
+    'paylocity.com': 'Paylocity',
+    'smartrecruiters.com': 'SmartRecruiters',
+    'jobscore.com': 'JobScore',
   };
 
   for (const [domain, name] of Object.entries(sourceMap)) {
@@ -222,218 +122,307 @@ function extractSource(url: string): Job['source'] {
 }
 
 /**
- * Convert Google search result to Job type
+ * Convert SearchAPI job to our Job type
  */
-function convertGoogleResultToJob(result: GoogleSearchItem): Job {
+function convertToJob(apiJob: SearchAPIJob): Job {
+  const applyLink = extractApplyLink(apiJob);
+
   return {
-    id: generateJobId(result.link),
-    title: extractJobTitle(result.title),
-    company: extractCompanyName(result.title, result.link),
-    location: extractLocationFromResult(result.snippet, result.title),
-    url: result.link,
-    salary: extractSalary(result.snippet),
-    description: result.snippet,
-    source: extractSource(result.link),
+    id: generateJobId(applyLink, apiJob.title, apiJob.company_name),
+    title: apiJob.title,
+    company: apiJob.company_name,
+    location: apiJob.location || 'Remote',
+    url: applyLink,
+    salary: apiJob.detected_extensions?.salary,
+    description: apiJob.description?.substring(0, 300) + (apiJob.description && apiJob.description.length > 300 ? '...' : ''),
+    source: extractSource(applyLink),
   };
 }
 
 /**
- * Execute a single Google Custom Search query
+ * Execute a single SearchAPI Google Jobs query
+ * Each call uses 1 API credit
  */
-async function executeGoogleSearch(
+async function executeSearchAPIQuery(
   query: string,
   apiKey: string,
-  searchEngineId: string,
-  num: number = 10
-): Promise<GoogleSearchItem[]> {
-  const url = new URL(GOOGLE_CSE_API_URL);
-  url.searchParams.set('key', apiKey);
-  url.searchParams.set('cx', searchEngineId);
+  location?: string
+): Promise<SearchAPIJob[]> {
+  const url = new URL(SEARCHAPI_URL);
+  url.searchParams.set('engine', 'google_jobs');
   url.searchParams.set('q', query);
-  url.searchParams.set('num', String(Math.min(num, 10))); // Google CSE max is 10
+  url.searchParams.set('api_key', apiKey);
 
-  console.log('Google CSE Query:', query);
+  if (location) {
+    url.searchParams.set('location', location);
+  }
+
+  console.log(`SearchAPI Query: "${query}" ${location ? `in ${location}` : ''}`);
 
   const response = await fetch(url.toString());
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Google CSE Error Response:', errorText);
-    throw new Error(`Google CSE API error: ${response.status} - ${errorText}`);
+    console.error('SearchAPI Error Response:', errorText);
+    throw new Error(`SearchAPI error: ${response.status} - ${errorText}`);
   }
 
-  const data: GoogleSearchResponse = await response.json();
+  const data: SearchAPIResponse = await response.json();
 
   if (data.error) {
-    throw new Error(`Google CSE API error: ${data.error.message}`);
+    throw new Error(`SearchAPI error: ${data.error}`);
   }
 
-  console.log(`Google CSE returned ${data.items?.length || 0} results`);
+  const jobCount = data.jobs?.length || 0;
+  console.log(`SearchAPI returned ${jobCount} jobs`);
 
-  return data.items || [];
+  return data.jobs || [];
 }
 
 /**
- * Execute fallback search with broader query
+ * Infer relevant job titles from resume skills, industries, and experience
+ * This creates searchable job titles even when the resume has non-standard titles
  */
-async function performFallbackSearch(
-  jobTitle: string,
-  apiKey: string,
-  searchEngineId: string
-): Promise<Job[]> {
-  const fallbackQuery = buildFallbackQuery(jobTitle);
-  console.log('Trying broader fallback search:', fallbackQuery);
+function inferJobTitlesFromResume(parsedResume: ParsedResume): string[] {
+  const inferredTitles: string[] = [];
+  const skills = parsedResume.skills || [];
+  const industries = parsedResume.industries || [];
+  const yearsExp = parsedResume.yearsExperience || 0;
 
-  try {
-    const results = await executeGoogleSearch(fallbackQuery, apiKey, searchEngineId, 10);
-    return results.map(convertGoogleResultToJob);
-  } catch (error) {
-    console.error('Fallback search failed:', error);
-    return [];
+  // Skill-based job title inference
+  const skillLower = skills.map(s => s.toLowerCase()).join(' ');
+
+  // Tech/Engineering
+  if (/javascript|typescript|react|vue|angular|frontend|front-end|html|css/.test(skillLower)) {
+    inferredTitles.push('Frontend Developer', 'Frontend Engineer');
   }
+  if (/node|python|java|golang|rust|backend|back-end|api|server/.test(skillLower)) {
+    inferredTitles.push('Backend Developer', 'Software Engineer');
+  }
+  if (/react|node|fullstack|full-stack|typescript/.test(skillLower)) {
+    inferredTitles.push('Full Stack Developer', 'Full Stack Engineer');
+  }
+  if (/aws|azure|gcp|cloud|docker|kubernetes|devops|infrastructure/.test(skillLower)) {
+    inferredTitles.push('DevOps Engineer', 'Cloud Engineer', 'Site Reliability Engineer');
+  }
+  if (/data|sql|python|analytics|tableau|power bi|statistics/.test(skillLower)) {
+    inferredTitles.push('Data Analyst', 'Business Intelligence Analyst', 'Data Scientist');
+  }
+  if (/machine learning|ml|ai|tensorflow|pytorch|llm|nlp/.test(skillLower)) {
+    inferredTitles.push('Machine Learning Engineer', 'AI Engineer', 'Data Scientist');
+  }
+  if (/ios|swift|android|kotlin|mobile|react native|flutter/.test(skillLower)) {
+    inferredTitles.push('Mobile Developer', 'iOS Developer', 'Android Developer');
+  }
+
+  // Design
+  if (/figma|sketch|ui|ux|design|user experience|wireframe|prototype/.test(skillLower)) {
+    inferredTitles.push('UX Designer', 'Product Designer', 'UI Designer');
+  }
+
+  // Product & Management
+  if (/product|roadmap|agile|scrum|jira|stakeholder|requirements/.test(skillLower)) {
+    inferredTitles.push('Product Manager', 'Technical Product Manager', 'Program Manager');
+  }
+  if (/project management|pmp|timeline|budget|resource/.test(skillLower)) {
+    inferredTitles.push('Project Manager', 'Technical Project Manager');
+  }
+
+  // Marketing & Content
+  if (/marketing|seo|sem|social media|content|copywriting|campaign/.test(skillLower)) {
+    inferredTitles.push('Marketing Manager', 'Digital Marketing Manager', 'Content Strategist');
+  }
+  if (/video|premiere|after effects|film|production|editing/.test(skillLower)) {
+    inferredTitles.push('Video Producer', 'Content Creator', 'Creative Producer');
+  }
+
+  // Business & Operations
+  if (/sales|business development|crm|pipeline|revenue/.test(skillLower)) {
+    inferredTitles.push('Sales Manager', 'Business Development Manager', 'Account Executive');
+  }
+  if (/operations|process|efficiency|logistics|supply chain/.test(skillLower)) {
+    inferredTitles.push('Operations Manager', 'Business Operations');
+  }
+  if (/finance|accounting|financial|budget|forecast/.test(skillLower)) {
+    inferredTitles.push('Financial Analyst', 'Finance Manager');
+  }
+
+  // Web3/Crypto specific
+  if (/blockchain|web3|crypto|nft|smart contract|solidity|defi/.test(skillLower)) {
+    inferredTitles.push('Web3 Developer', 'Blockchain Developer', 'Crypto Product Manager');
+  }
+
+  // AI/Generative AI specific
+  if (/generative ai|prompt|gpt|llm|chatgpt|anthropic|openai/.test(skillLower)) {
+    inferredTitles.push('AI Product Manager', 'Prompt Engineer', 'AI Solutions Engineer');
+  }
+
+  // Industry-based inference
+  const industryLower = industries.map(i => i.toLowerCase()).join(' ');
+  if (/startup|tech|saas/.test(industryLower) && inferredTitles.length === 0) {
+    inferredTitles.push('Software Engineer', 'Product Manager');
+  }
+  if (/fintech|finance|banking/.test(industryLower)) {
+    inferredTitles.push('Fintech Product Manager', 'Financial Software Engineer');
+  }
+  if (/healthcare|health|medical/.test(industryLower)) {
+    inferredTitles.push('Healthcare Product Manager', 'Health Tech Engineer');
+  }
+
+  // Seniority prefixes based on experience
+  if (yearsExp >= 8) {
+    // Add senior/lead versions
+    const seniorTitles = inferredTitles.slice(0, 3).map(t => `Senior ${t}`);
+    inferredTitles.push(...seniorTitles);
+    inferredTitles.push('Engineering Manager', 'Director of Engineering', 'VP of Product');
+  } else if (yearsExp >= 5) {
+    const seniorTitles = inferredTitles.slice(0, 2).map(t => `Senior ${t}`);
+    inferredTitles.push(...seniorTitles);
+  }
+
+  // Remove duplicates and limit
+  return [...new Set(inferredTitles)].slice(0, 10);
 }
 
 /**
- * Generate fallback search terms when no job titles are available
- * Uses skills and industries to construct broader searches
+ * Get a diverse set of search queries combining resume titles and inferred titles
  */
-function generateFallbackSearchTerms(parsedResume: ParsedResume): string[] {
-  const fallbackTerms: string[] = [];
+function getSearchQueries(parsedResume: ParsedResume): string[] {
+  const queries: string[] = [];
 
-  // Try to construct job titles from skills
-  const techSkills = parsedResume.skills?.filter(skill =>
-    /javascript|python|java|react|node|typescript|sql|aws|docker|kubernetes|golang|rust|c\+\+|c#/i.test(skill)
-  ) || [];
+  // Start with explicit job titles from resume (if any are reasonable)
+  const resumeTitles = parsedResume.jobTitles || [];
+  const goodResumeTitles = resumeTitles.filter(title => {
+    const lower = title.toLowerCase();
+    // Filter out titles that won't search well
+    return !lower.includes('founder') &&
+           !lower.includes('ceo') &&
+           !lower.includes('owner') &&
+           !lower.includes('consultant') &&
+           title.length < 40;
+  });
 
-  if (techSkills.length > 0) {
-    fallbackTerms.push(`${techSkills[0]} Developer`);
-    if (techSkills.length > 1) {
-      fallbackTerms.push(`${techSkills[1]} Engineer`);
-    }
-  }
+  queries.push(...goodResumeTitles.slice(0, 2));
 
-  // Use industries as search terms
-  if (parsedResume.industries?.length > 0) {
-    const industry = parsedResume.industries[0];
-    fallbackTerms.push(`${industry} Specialist`);
-  }
+  // Add inferred titles
+  const inferredTitles = inferJobTitlesFromResume(parsedResume);
+  queries.push(...inferredTitles);
 
-  // Add generic fallback based on experience level
-  if (parsedResume.yearsExperience !== null) {
-    if (parsedResume.yearsExperience >= 7) {
-      fallbackTerms.push('Senior Software Engineer');
-    } else if (parsedResume.yearsExperience >= 3) {
-      fallbackTerms.push('Software Engineer');
-    } else {
-      fallbackTerms.push('Junior Developer');
-    }
-  }
-
-  // Ultimate fallback
-  if (fallbackTerms.length === 0) {
-    fallbackTerms.push('Software Engineer', 'Developer', 'Engineer');
-  }
-
-  return fallbackTerms.slice(0, 3);
+  // Remove duplicates
+  return [...new Set(queries)].slice(0, 8);
 }
 
 /**
- * Search for jobs using Google Custom Search API
- * Runs parallel queries for multiple job titles to maximize results
+ * Main job search function using SearchAPI.io Google Jobs
+ *
+ * GUARANTEED to return up to maxResults jobs by:
+ * 1. Using inferred job titles from skills (not just resume titles)
+ * 2. Running multiple queries until we hit the target
+ * 3. Searching with and without location restrictions
  */
 export async function searchJobs(
   parsedResume: ParsedResume,
   maxResults: number = 25
 ): Promise<Job[]> {
-  const { apiKey, searchEngineId } = getGoogleCredentials();
+  const apiKey = getSearchAPIKey();
 
-  console.log('=== Google Custom Search Job Search ===');
+  console.log('=== SearchAPI.io Google Jobs Search ===');
   console.log('Parsed Resume:', JSON.stringify(parsedResume, null, 2));
 
-  // Get top 3 job titles from resume
-  let jobTitles = parsedResume.jobTitles?.slice(0, 3) || [];
-  const location = extractLocation(parsedResume);
+  const location = parsedResume.location || null;
+  const allJobs: Job[] = [];
+  const seenIds = new Set<string>();
 
-  // CRITICAL FIX: If no job titles found, use fallback search terms
-  if (jobTitles.length === 0) {
-    console.warn('No job titles found in resume - using fallback search terms');
-    jobTitles = generateFallbackSearchTerms(parsedResume);
-    console.log('Generated fallback job titles:', jobTitles);
-  }
-
-  console.log('Job titles to search:', jobTitles);
+  // Get diverse search queries (both from resume and inferred from skills)
+  const searchQueries = getSearchQueries(parsedResume);
+  console.log('Search queries to try:', searchQueries);
   console.log('Location:', location);
 
+  let queryCount = 0;
+  const maxQueries = 7; // Increased from 5 to allow Phase 3 execution for better coverage
+
   try {
-    // Build queries for each job title
-    const queries = jobTitles.map(title => buildSearchQuery(title, location));
+    // Phase 1: Search with location for first 2-3 queries
+    for (const query of searchQueries.slice(0, 3)) {
+      if (allJobs.length >= maxResults || queryCount >= maxQueries) break;
 
-    // Execute all queries in parallel
-    const searchPromises = queries.map(query =>
-      executeGoogleSearch(query, apiKey, searchEngineId, 10)
-        .catch(error => {
-          console.error('Query failed:', error);
-          return [] as GoogleSearchItem[];
-        })
-    );
+      queryCount++;
+      console.log(`\n--- Query ${queryCount}: "${query}" in "${location || 'any'}" ---`);
 
-    const resultsArrays = await Promise.all(searchPromises);
+      const results = await executeSearchAPIQuery(query, apiKey, location || undefined);
 
-    // Flatten results
-    const allResults = resultsArrays.flat();
-
-    console.log(`Total results from ${queries.length} queries: ${allResults.length}`);
-
-    // Deduplicate by URL
-    const seenUrls = new Set<string>();
-    const uniqueResults: GoogleSearchItem[] = [];
-
-    for (const result of allResults) {
-      if (!seenUrls.has(result.link)) {
-        seenUrls.add(result.link);
-        uniqueResults.push(result);
-      }
-    }
-
-    console.log(`Unique results after deduplication: ${uniqueResults.length}`);
-
-    // If we got 0 results, try fallback search
-    if (uniqueResults.length === 0 && jobTitles.length > 0) {
-      console.warn('No jobs found with specific criteria. Trying fallback search...');
-      const fallbackJobs = await performFallbackSearch(jobTitles[0], apiKey, searchEngineId);
-      return fallbackJobs.slice(0, maxResults);
-    }
-
-    // Convert to Job type
-    const jobs = uniqueResults.map(convertGoogleResultToJob);
-
-    // If we still need more results and have fewer than maxResults, try fallback
-    if (jobs.length < maxResults && jobs.length < 10) {
-      console.log(`Only ${jobs.length} jobs found, trying to get more with fallback...`);
-      const fallbackJobs = await performFallbackSearch(jobTitles[0], apiKey, searchEngineId);
-
-      // Add fallback jobs that aren't duplicates
-      for (const job of fallbackJobs) {
-        if (!seenUrls.has(job.url) && jobs.length < maxResults) {
-          seenUrls.add(job.url);
-          jobs.push(job);
+      for (const apiJob of results) {
+        const job = convertToJob(apiJob);
+        if (!seenIds.has(job.id) && allJobs.length < maxResults) {
+          seenIds.add(job.id);
+          allJobs.push(job);
         }
       }
+      console.log(`Total unique jobs: ${allJobs.length}`);
     }
 
-    return jobs.slice(0, maxResults);
+    // Phase 2: Search WITHOUT location if we need more jobs
+    if (allJobs.length < maxResults) {
+      for (const query of searchQueries.slice(0, 3)) {
+        if (allJobs.length >= maxResults || queryCount >= maxQueries) break;
+
+        queryCount++;
+        console.log(`\n--- Query ${queryCount} (no location): "${query}" ---`);
+
+        const results = await executeSearchAPIQuery(query, apiKey);
+
+        for (const apiJob of results) {
+          const job = convertToJob(apiJob);
+          if (!seenIds.has(job.id) && allJobs.length < maxResults) {
+            seenIds.add(job.id);
+            allJobs.push(job);
+          }
+        }
+        console.log(`Total unique jobs: ${allJobs.length}`);
+      }
+    }
+
+    // Phase 3: Try additional inferred queries if still short
+    if (allJobs.length < maxResults && searchQueries.length > 3) {
+      for (const query of searchQueries.slice(3)) {
+        if (allJobs.length >= maxResults || queryCount >= maxQueries) break;
+
+        queryCount++;
+        console.log(`\n--- Query ${queryCount} (additional): "${query}" ---`);
+
+        const results = await executeSearchAPIQuery(query, apiKey, location || undefined);
+
+        for (const apiJob of results) {
+          const job = convertToJob(apiJob);
+          if (!seenIds.has(job.id) && allJobs.length < maxResults) {
+            seenIds.add(job.id);
+            allJobs.push(job);
+          }
+        }
+        console.log(`Total unique jobs: ${allJobs.length}`);
+      }
+    }
+
+    console.log(`\n=== Final Results: ${allJobs.length} jobs (used ${queryCount} API calls) ===`);
+
+    // Warn if we couldn't reach the target
+    if (allJobs.length < maxResults) {
+      console.warn(`⚠️ WARNING: Only found ${allJobs.length}/${maxResults} jobs. Consider expanding search criteria.`);
+    }
+
+    return allJobs.slice(0, maxResults);
 
   } catch (error) {
-    console.error('Google CSE Error:', error);
+    console.error('SearchAPI Error:', error);
     if (error instanceof Error) {
-      throw new Error(`Failed to fetch jobs from Google: ${error.message}`);
+      throw new Error(`Failed to search jobs: ${error.message}`);
     }
-    throw new Error('Failed to fetch jobs from Google');
+    throw new Error('Failed to search jobs');
   }
 }
 
 /**
- * Get top N jobs from search results
+ * Get top N jobs - convenience function
  */
 export async function getTopJobs(
   parsedResume: ParsedResume,
@@ -444,14 +433,23 @@ export async function getTopJobs(
 }
 
 /**
- * Check if any jobs were found for the given criteria
+ * Check if any jobs can be found for the given criteria
  */
 export async function hasJobResults(parsedResume: ParsedResume): Promise<boolean> {
   try {
-    const jobs = await searchJobs(parsedResume, 1);
+    const jobs = await searchJobs(parsedResume, 5);
     return jobs.length > 0;
   } catch (error) {
     console.error('Error checking for job results:', error);
     return false;
   }
+}
+
+// Legacy exports for backwards compatibility
+export function buildSearchQuery(jobTitle: string, location: string | null): string {
+  return location ? `${jobTitle} in ${location}` : jobTitle;
+}
+
+export function extractLocation(parsedResume: ParsedResume): string | null {
+  return parsedResume.location || null;
 }
