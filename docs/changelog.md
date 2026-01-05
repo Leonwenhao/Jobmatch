@@ -2,6 +2,37 @@
 
 All notable changes to JobMatch will be documented in this file.
 
+## [1.3.0] - 2025-12-30
+
+### Fixed
+- **Email Not Sending Issue**
+  - Root cause: Email was only sent when `jobs.length > 5`, but job search often returned fewer
+  - Changed email logic to send ALL jobs as a receipt/backup regardless of count
+  - Added better logging for email send attempts and failures
+
+- **Inconsistent Job Count**
+  - Root cause: Fallback search only triggered when `jobs.length < 10`, not below target of 25
+  - Implemented 3-tier search strategy to reliably return 25 jobs:
+    1. Initial parallel searches for top 3 job titles with location
+    2. Retry without location filter if below target
+    3. Broader search with skills-based fallback terms
+
+### Changed
+- **Results Page Now Shows All Jobs**
+  - Previously showed only 5 jobs, emailed 20 more
+  - Now displays all 25 jobs on results page
+  - Email serves as receipt/backup copy
+  - Updated UI messaging to reflect new behavior
+
+### Technical Details
+- `lib/job-search.ts`: Enhanced fallback logic with multiple search strategies
+- `app/api/webhook/route.ts`: Send all jobs in email, not just overflow
+- `app/api/results/[sessionId]/route.ts`: Return all jobs, not just first 5
+- `app/results/[sessionId]/page.tsx`: Updated messaging for all-jobs display
+- `lib/resend.ts`: Updated email subject line
+
+---
+
 ## [1.2.0] - 2025-12-29
 
 ### Fixed

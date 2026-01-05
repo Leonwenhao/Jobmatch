@@ -10,7 +10,7 @@
         ▼
 ┌───────────────┐     ┌───────────────┐     ┌───────────────┐
 │  Upload Resume │ ──▶ │  Pay $5       │ ──▶ │  Get Jobs     │
-│  (PDF/Text)    │     │  (Stripe)     │     │  (5 + 20)     │
+│  (PDF)         │     │  (Stripe)     │     │  (All 25)     │
 └───────────────┘     └───────────────┘     └───────────────┘
 ```
 
@@ -94,18 +94,25 @@ Stripe                  Next.js                  Google CSE         Resend
  │  (payment complete)    │                         │                  │
  │─────────────────────▶  │                         │                  │
  │                         │                         │                  │
- │                         │  Search jobs (x3)      │                  │
+ │                         │  Search jobs           │                  │
+ │                         │  (3-tier strategy)     │                  │
  │                         │─────────────────────▶  │                  │
  │                         │                         │                  │
- │                         │  Job results           │                  │
+ │                         │  Job results (≤25)     │                  │
  │                         │◀─────────────────────  │                  │
  │                         │                         │                  │
- │                         │  Send email (20 jobs)  │                  │
+ │                         │  Email ALL jobs        │                  │
+ │                         │  (as receipt/backup)   │                  │
  │                         │──────────────────────────────────────▶  │
  │                         │                         │                  │
- │                         │  Store 25 jobs         │                  │
+ │                         │  Store all jobs        │                  │
  │                         │  Mark complete         │                  │
 ```
+
+**3-Tier Search Strategy:**
+1. Parallel queries for top 3 job titles + location
+2. Retry without location filter if below target
+3. Broader search with skills-based fallback terms
 
 ### Phase 4: Results Display
 ```
@@ -117,11 +124,14 @@ User                    Next.js
  │  Poll every 2s         │
  │─────────────────────▶  │
  │                         │
- │  { jobs: [...5], status }
+ │  { jobs: [...ALL], status }
  │◀─────────────────────  │
  │                         │
- │  Display jobs          │
+ │  Display ALL jobs      │
+ │  (up to 25 jobs)       │
 ```
+
+**Note:** All jobs are displayed on the results page. Email serves as a receipt/backup copy.
 
 ## API Routes
 
@@ -134,22 +144,22 @@ User                    Next.js
 
 ## Storage
 
-**In-Memory Session Storage (V1 MVP)**
+**Upstash Redis Session Storage**
 
-- No database required
-- Sessions stored in Map with 2-hour TTL
-- Auto-cleanup of expired sessions
-- Stateless design for serverless deployment
+- Serverless Redis for session persistence
+- Sessions stored with 2-hour TTL
+- Backup recovery from Stripe metadata if Redis session expires
+- Works across serverless function instances
 
 ```typescript
-Map<sessionId, {
+Session: {
   id: string,
   email: string,
   parsedResume: ParsedResume,
   jobs: Job[],
   status: 'pending' | 'processing' | 'complete' | 'failed',
   createdAt: Date
-}>
+}
 ```
 
 ## External Services
