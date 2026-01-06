@@ -80,9 +80,9 @@ export async function createCheckoutSession(
           currency: 'usd',
           product_data: {
             name: 'JobMatch - 25 Curated Job Postings',
-            description: 'Get 25 jobs matched to your resume (5 instantly, 20 via email)',
+            description: 'Get 25 jobs matched to your resume + email backup',
           },
-          unit_amount: 500, // $5.00 in cents
+          unit_amount: 299, // $2.99 in cents
         },
         quantity: 1,
       },
