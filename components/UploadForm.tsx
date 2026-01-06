@@ -116,104 +116,96 @@ export default function UploadForm() {
     }
   };
 
-  const getBorderColor = () => {
+  const getDropZoneClasses = () => {
+    const base = 'bg-marty-gray border-2 border-dashed rounded-xl p-12 md:p-16 cursor-pointer transition-all duration-300';
     switch (state) {
       case 'dragging':
-        return 'border-blue-400 bg-blue-50';
+        return `${base} border-marty-orange bg-orange-50 scale-[1.01]`;
       case 'error':
-        return 'border-red-400 bg-red-50';
+        return `${base} border-red-400 bg-red-50`;
       case 'success':
-        return 'border-green-400 bg-green-50';
+        return `${base} border-green-400 bg-green-50`;
+      case 'uploading':
+        return `${base} border-gray-300 cursor-not-allowed opacity-75`;
       default:
-        return 'border-gray-300 hover:border-gray-400';
+        return `${base} border-gray-300 hover:border-marty-orange hover:bg-orange-50/50`;
     }
   };
 
   const getIcon = () => {
-    switch (state) {
-      case 'uploading':
-        return (
-          <svg
-            className="w-12 h-12 text-blue-500 animate-spin"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-            />
-          </svg>
-        );
-      case 'success':
-        return (
-          <svg
-            className="w-12 h-12 text-green-500"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
-        );
-      case 'error':
-        return (
-          <svg
-            className="w-12 h-12 text-red-500"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-        );
-      default:
-        return (
-          <svg
-            className="w-12 h-12 text-gray-400"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-            />
-          </svg>
-        );
+    if (state === 'uploading') {
+      return (
+        <div className="flex flex-col items-center">
+          <div className="w-5 h-5 bg-marty-orange rounded-full animate-bounce-loader mb-4" />
+          <span className="text-sm font-semibold text-marty-orange uppercase tracking-wide">
+            Processing...
+          </span>
+        </div>
+      );
     }
+
+    if (state === 'success') {
+      return (
+        <svg
+          className="w-12 h-12 text-green-500"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M5 13l4 4L19 7"
+          />
+        </svg>
+      );
+    }
+
+    if (state === 'error') {
+      return (
+        <svg
+          className="w-12 h-12 text-red-500"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+      );
+    }
+
+    return (
+      <svg
+        className="w-12 h-12 text-marty-orange"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+        />
+      </svg>
+    );
   };
 
   const getStatusText = () => {
     switch (state) {
       case 'uploading':
-        return 'Uploading your resume...';
+        return '';
       case 'success':
-        return 'Success! Redirecting to checkout...';
+        return 'Success! Redirecting...';
       case 'error':
         return errorMessage;
       case 'dragging':
@@ -221,20 +213,25 @@ export default function UploadForm() {
       default:
         return selectedFile
           ? selectedFile.name
-          : 'Drag and drop your resume, or click to browse';
+          : 'Drop your resume here';
     }
   };
 
+  const getSubText = () => {
+    if (state === 'idle' && !selectedFile) {
+      return 'or click to browse (PDF only)';
+    }
+    if (selectedFile && state !== 'uploading' && state !== 'success') {
+      return `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`;
+    }
+    return null;
+  };
+
   return (
-    <div className="w-full max-w-xl mx-auto">
+    <div className="w-full">
       {/* Drop Zone */}
       <div
-        className={`
-          relative border-2 border-dashed rounded-lg p-8 md:p-12
-          transition-all duration-200 ease-in-out cursor-pointer
-          ${getBorderColor()}
-          ${state === 'uploading' ? 'cursor-not-allowed opacity-75' : ''}
-        `}
+        className={getDropZoneClasses()}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -249,30 +246,24 @@ export default function UploadForm() {
           disabled={state === 'uploading'}
         />
 
-        <div className="flex flex-col items-center justify-center text-center space-y-4">
+        <div className="flex flex-col items-center justify-center text-center pointer-events-none">
           {getIcon()}
 
-          <div className="space-y-2">
+          {getStatusText() && (
             <p
-              className={`text-sm md:text-base font-medium ${
-                state === 'error' ? 'text-red-600' : 'text-gray-700'
+              className={`mt-4 font-semibold text-base ${
+                state === 'error' ? 'text-red-600' : 'text-marty-black'
               }`}
             >
               {getStatusText()}
             </p>
+          )}
 
-            {state === 'idle' && !selectedFile && (
-              <p className="text-xs md:text-sm text-gray-500">
-                PDF only, maximum 5MB
-              </p>
-            )}
-
-            {selectedFile && state !== 'uploading' && state !== 'success' && (
-              <p className="text-xs text-gray-500">
-                {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-              </p>
-            )}
-          </div>
+          {getSubText() && (
+            <p className="mt-1 text-sm text-gray-500">
+              {getSubText()}
+            </p>
+          )}
         </div>
       </div>
 
@@ -283,29 +274,16 @@ export default function UploadForm() {
             e.stopPropagation();
             handleUpload();
           }}
-          disabled={false}
           className="
-            mt-6 w-full py-3 px-6
-            bg-blue-600 hover:bg-blue-700
-            text-white font-medium rounded-lg
-            transition-colors duration-200
-            disabled:bg-gray-400 disabled:cursor-not-allowed
-            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+            mt-6 w-full py-4 px-6
+            bg-marty-black hover:bg-marty-orange
+            text-white font-semibold rounded-full
+            transition-all duration-300
+            focus:outline-none focus:ring-2 focus:ring-marty-orange focus:ring-offset-2
           "
         >
           Continue to Payment
         </button>
-      )}
-
-      {/* Help Text */}
-      {state === 'idle' && !selectedFile && (
-        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-xs md:text-sm text-blue-800 leading-relaxed">
-            Upload your resume to get started. We'll analyze your experience and find 25 job
-            opportunities matched to your skills. 5 jobs delivered instantly, 20 more sent to your
-            email.
-          </p>
-        </div>
       )}
 
       {/* Error State Retry */}
@@ -317,9 +295,9 @@ export default function UploadForm() {
             setErrorMessage('');
           }}
           className="
-            mt-4 w-full py-2 px-4
-            bg-gray-100 hover:bg-gray-200
-            text-gray-700 font-medium rounded-lg
+            mt-4 w-full py-3 px-4
+            bg-marty-gray hover:bg-gray-200
+            text-marty-black font-medium rounded-full
             transition-colors duration-200
             focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2
           "

@@ -110,27 +110,27 @@ export default function ResultsPage() {
   // Loading state - processing
   if (isLoading || results?.status === 'processing' || results?.status === 'paid') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-white flex items-center justify-center px-4">
         <div className="text-center max-w-md">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-6"></div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-3">
-            Finding Your Perfect Matches
+          <div className="w-5 h-5 bg-marty-orange rounded-full animate-bounce-loader mx-auto mb-8" />
+          <h2 className="text-3xl font-bold text-marty-black mb-4 tracking-tight">
+            Finding Your Matches
           </h2>
-          <p className="text-gray-700 mb-2">
-            Our AI is analyzing your resume and searching thousands of jobs...
+          <p className="text-gray-500 mb-2">
+            Analyzing your resume and searching thousands of jobs...
           </p>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-400">
             This usually takes 10-20 seconds
           </p>
 
           {/* Progress indicator */}
-          <div className="mt-6 space-y-2 text-sm text-gray-600">
+          <div className="mt-8 space-y-3 text-sm text-gray-500">
             <div className="flex items-center justify-center gap-2">
-              <span className="text-green-600">✓</span>
+              <span className="text-marty-orange font-bold">&#10003;</span>
               <span>Resume analyzed</span>
             </div>
             <div className="flex items-center justify-center gap-2">
-              <div className="animate-pulse">⏳</div>
+              <span className="w-2 h-2 bg-marty-orange rounded-full animate-pulse" />
               <span>Searching job databases...</span>
             </div>
           </div>
@@ -142,23 +142,27 @@ export default function ResultsPage() {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
-          <div className="text-5xl mb-4">❌</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+      <div className="min-h-screen bg-white flex items-center justify-center px-4">
+        <div className="max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+          <h1 className="text-3xl font-bold text-marty-black mb-4 tracking-tight">
             Something Went Wrong
           </h1>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <div className="space-y-3">
+          <p className="text-gray-500 mb-8">{error}</p>
+          <div className="space-y-4">
             <a
               href="/"
-              className="block w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+              className="block w-full px-6 py-4 bg-marty-black hover:bg-marty-orange text-white font-semibold rounded-full transition-all duration-300"
             >
               Try Again
             </a>
             <a
               href="mailto:support@jobmatch.com"
-              className="block w-full px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
+              className="block w-full px-6 py-4 bg-marty-gray hover:bg-gray-200 text-marty-black font-medium rounded-full transition-colors"
             >
               Contact Support
             </a>
@@ -171,28 +175,32 @@ export default function ResultsPage() {
   // No jobs found
   if (results && results.jobs.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
-          <div className="text-5xl mb-4">🔍</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+      <div className="min-h-screen bg-white flex items-center justify-center px-4">
+        <div className="max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-marty-gray rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <h1 className="text-3xl font-bold text-marty-black mb-4 tracking-tight">
             No Matches Found
           </h1>
-          <p className="text-gray-600 mb-6">
-            We couldn't find jobs matching your resume right now. This is rare, but it can happen.
+          <p className="text-gray-500 mb-2">
+            We couldn't find jobs matching your resume right now.
           </p>
-          <p className="text-sm text-gray-600 mb-6">
-            We'll keep looking and email you if we find relevant opportunities. In the meantime, please contact us for a refund.
+          <p className="text-sm text-gray-400 mb-10">
+            We'll email you if we find relevant opportunities. Contact us for a refund.
           </p>
-          <div className="space-y-3">
+          <div className="space-y-4">
             <a
               href="mailto:support@jobmatch.com"
-              className="block w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+              className="block w-full px-6 py-4 bg-marty-black hover:bg-marty-orange text-white font-semibold rounded-full transition-all duration-300"
             >
               Contact Support
             </a>
             <a
               href="/"
-              className="block w-full px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
+              className="block w-full px-6 py-4 bg-marty-gray hover:bg-gray-200 text-marty-black font-medium rounded-full transition-colors"
             >
               Upload Another Resume
             </a>
@@ -204,43 +212,43 @@ export default function ResultsPage() {
 
   // Success state with jobs
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <main className="container mx-auto px-4 py-8 md:py-12">
+    <div className="min-h-screen bg-white">
+      <div className="container mx-auto px-4 py-8 md:py-12">
         {/* Success Header */}
-        <div className="text-center mb-8 md:mb-12">
-          <div className="text-5xl md:text-6xl mb-4">🎯</div>
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
-            Your Job Matches Are Ready!
+        <div className="text-center mb-10 md:mb-14">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-marty-black mb-4 tracking-tighter">
+            Your <span className="text-marty-orange">Matches</span> Are Ready
           </h1>
-          <p className="text-lg md:text-xl text-gray-700 mb-2">
-            Here are your {results!.jobs.length} job matches
+          <p className="text-lg text-gray-500 mb-2">
+            {results!.jobs.length} jobs matched to your skills
           </p>
           {results!.email && (
-            <p className="text-sm md:text-base text-gray-600">
-              We've also sent a copy to <span className="font-medium">{results!.email}</span>
+            <p className="text-sm text-gray-400">
+              Copy sent to <span className="font-medium">{results!.email}</span>
             </p>
           )}
         </div>
 
         {/* Job Results */}
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-3xl mx-auto">
           <JobList jobs={results!.jobs} />
         </div>
 
         {/* Email Receipt Notice */}
         {results!.email && (
-          <div className="max-w-4xl mx-auto mt-8 bg-white border-2 border-green-200 rounded-lg p-6 shadow-md">
+          <div className="max-w-3xl mx-auto mt-10 bg-marty-gray rounded-xl p-6">
             <div className="flex items-start gap-4">
-              <span className="text-3xl md:text-4xl flex-shrink-0">📧</span>
+              <div className="w-10 h-10 bg-marty-orange rounded-full flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </div>
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2 text-lg">
-                  Email Receipt Sent!
+                <h3 className="font-semibold text-marty-black mb-1">
+                  Backup Sent to Your Email
                 </h3>
-                <p className="text-gray-700 text-sm md:text-base mb-3">
-                  We've emailed a copy of all {results!.jobs.length} job matches to you for easy reference.
-                </p>
-                <p className="text-xs md:text-sm text-gray-600">
-                  Check your spam folder if you don't see it. Email sent to: <span className="font-medium">{results!.email}</span>
+                <p className="text-gray-500 text-sm">
+                  A copy of all {results!.jobs.length} matches was sent to {results!.email} so you never lose them.
                 </p>
               </div>
             </div>
@@ -248,18 +256,18 @@ export default function ResultsPage() {
         )}
 
         {/* Footer CTA */}
-        <div className="max-w-4xl mx-auto mt-8 text-center">
-          <p className="text-gray-600 text-sm md:text-base mb-4">
-            Good luck with your job search! 🚀
+        <div className="max-w-3xl mx-auto mt-10 text-center">
+          <p className="text-gray-400 text-sm mb-4">
+            Good luck with your job search!
           </p>
           <a
             href="/"
-            className="inline-block px-6 py-2 text-sm text-gray-600 hover:text-gray-900 underline"
+            className="inline-block text-sm text-marty-orange hover:underline"
           >
             Search for another resume
           </a>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

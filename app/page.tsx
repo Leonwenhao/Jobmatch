@@ -2,57 +2,61 @@ import UploadForm from "@/components/UploadForm";
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <main className="container mx-auto px-4 py-12 md:py-20">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Stop Scrolling. Start Applying.
+    <div className="min-h-screen bg-white">
+      <div className="container mx-auto px-4 py-12 md:py-20">
+        {/* Hero Section */}
+        <div className="flex flex-col items-center justify-center text-center max-w-4xl mx-auto">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-marty-black leading-[0.9] tracking-tighter mb-6">
+            Lock In.<br />
+            <span className="text-marty-orange">Land the Job.</span>
           </h1>
-          <p className="text-xl md:text-2xl text-gray-700 mb-2">
-            Upload your resume, get 25 jobs you're actually qualified for.
+          <p className="text-xl text-gray-500 max-w-lg mb-12 leading-relaxed">
+            Upload your resume. Get 25 jobs matched to you.
           </p>
-          <p className="text-lg text-gray-600">
-            No account needed. Just $5. Results in minutes.
-          </p>
-        </div>
 
-        {/* Upload Section */}
-        <div className="max-w-2xl mx-auto">
-          <UploadForm />
+          {/* Upload Section */}
+          <div className="w-full max-w-xl">
+            <UploadForm />
+          </div>
         </div>
 
         {/* How It Works */}
-        <div className="max-w-4xl mx-auto mt-20">
-          <h2 className="text-2xl md:text-3xl font-bold text-center text-gray-900 mb-10">
+        <div className="max-w-4xl mx-auto mt-24">
+          <h2 className="text-2xl md:text-3xl font-bold text-center text-marty-black mb-12 tracking-tight">
             How It Works
           </h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-white rounded-lg p-6 shadow-md">
-              <div className="text-3xl mb-4">📄</div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                1. Upload Resume
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="bg-marty-gray rounded-xl p-8 text-center transition-all duration-300 hover:scale-[1.02]">
+              <div className="w-12 h-12 bg-marty-orange rounded-full flex items-center justify-center text-white font-bold text-lg mx-auto mb-4">
+                1
+              </div>
+              <h3 className="text-lg font-semibold text-marty-black mb-2">
+                Upload Resume
               </h3>
-              <p className="text-gray-600">
-                Drop your PDF resume. No forms, no account signup required.
+              <p className="text-gray-500 text-sm">
+                Drop your PDF. No account needed.
               </p>
             </div>
-            <div className="bg-white rounded-lg p-6 shadow-md">
-              <div className="text-3xl mb-4">💳</div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                2. Pay $5
+            <div className="bg-marty-gray rounded-xl p-8 text-center transition-all duration-300 hover:scale-[1.02]">
+              <div className="w-12 h-12 bg-marty-orange rounded-full flex items-center justify-center text-white font-bold text-lg mx-auto mb-4">
+                2
+              </div>
+              <h3 className="text-lg font-semibold text-marty-black mb-2">
+                Pay $2.99
               </h3>
-              <p className="text-gray-600">
-                Quick, secure checkout. AI processes your resume instantly.
+              <p className="text-gray-500 text-sm">
+                Secure checkout via Stripe.
               </p>
             </div>
-            <div className="bg-white rounded-lg p-6 shadow-md">
-              <div className="text-3xl mb-4">🎯</div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                3. Get 25 Jobs
+            <div className="bg-marty-gray rounded-xl p-8 text-center transition-all duration-300 hover:scale-[1.02]">
+              <div className="w-12 h-12 bg-marty-orange rounded-full flex items-center justify-center text-white font-bold text-lg mx-auto mb-4">
+                3
+              </div>
+              <h3 className="text-lg font-semibold text-marty-black mb-2">
+                Get 25 Jobs
               </h3>
-              <p className="text-gray-600">
-                See 5 matches instantly. Receive 20 more via email.
+              <p className="text-gray-500 text-sm">
+                All results + email backup.
               </p>
             </div>
           </div>
@@ -60,29 +64,22 @@ export default function HomePage() {
 
         {/* Trust Signals */}
         <div className="max-w-2xl mx-auto mt-16 text-center">
-          <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-600">
+          <div className="flex flex-wrap justify-center gap-8 text-sm text-gray-500">
             <div className="flex items-center gap-2">
-              <span className="text-green-600">✓</span>
-              <span>Secure payment via Stripe</span>
+              <span className="text-marty-orange font-bold">&#10003;</span>
+              <span>Secure payment</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-green-600">✓</span>
-              <span>Resume deleted after processing</span>
+              <span className="text-marty-orange font-bold">&#10003;</span>
+              <span>Resume deleted after use</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-green-600">✓</span>
-              <span>No spam, no marketing emails</span>
+              <span className="text-marty-orange font-bold">&#10003;</span>
+              <span>No spam emails</span>
             </div>
           </div>
         </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-gray-200 mt-20 py-8">
-        <div className="container mx-auto px-4 text-center text-gray-600 text-sm">
-          <p>&copy; 2025 JobMatch. Helping job seekers find their next opportunity.</p>
-        </div>
-      </footer>
+      </div>
     </div>
   );
 }

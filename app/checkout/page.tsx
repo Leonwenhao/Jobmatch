@@ -14,17 +14,17 @@ function CheckoutContent() {
 
   if (!sessionId) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+      <div className="min-h-screen bg-white flex items-center justify-center px-4">
+        <div className="max-w-md w-full text-center">
+          <h1 className="text-3xl font-bold text-marty-black mb-4 tracking-tight">
             Session Not Found
           </h1>
-          <p className="text-gray-600 mb-6">
+          <p className="text-gray-500 mb-8">
             Please upload your resume to get started.
           </p>
           <a
             href="/"
-            className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md"
+            className="inline-block px-8 py-4 bg-marty-black hover:bg-marty-orange text-white font-semibold rounded-full transition-all duration-300"
           >
             Upload Resume
           </a>
@@ -66,43 +66,43 @@ function CheckoutContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <main className="container mx-auto px-4 py-12">
-        <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">
-            Almost There!
+    <div className="min-h-screen bg-white">
+      <div className="container mx-auto px-4 py-12">
+        <div className="max-w-md mx-auto">
+          <h1 className="text-4xl font-extrabold text-marty-black mb-2 text-center tracking-tighter">
+            Almost There
           </h1>
-          <p className="text-gray-600 mb-8 text-center">
-            Get 25 curated jobs for just $5
+          <p className="text-gray-500 mb-10 text-center text-lg">
+            Get 25 curated jobs for just <span className="text-marty-orange font-semibold">$2.99</span>
           </p>
 
           {/* What you get */}
-          <div className="bg-blue-50 rounded-lg p-4 mb-6">
-            <h2 className="font-semibold text-gray-900 mb-2">
+          <div className="bg-marty-gray rounded-xl p-6 mb-8">
+            <h2 className="font-semibold text-marty-black mb-4">
               What you'll receive:
             </h2>
-            <ul className="space-y-2 text-sm text-gray-700">
-              <li className="flex items-start gap-2">
-                <span className="text-green-600 mt-0.5">✓</span>
-                <span>5 job matches instantly on screen</span>
+            <ul className="space-y-3 text-sm text-gray-600">
+              <li className="flex items-start gap-3">
+                <span className="text-marty-orange font-bold mt-0.5">&#10003;</span>
+                <span>25 job matches displayed instantly</span>
               </li>
-              <li className="flex items-start gap-2">
-                <span className="text-green-600 mt-0.5">✓</span>
-                <span>20 more jobs delivered to your email</span>
+              <li className="flex items-start gap-3">
+                <span className="text-marty-orange font-bold mt-0.5">&#10003;</span>
+                <span>Email backup so you never lose your matches</span>
               </li>
-              <li className="flex items-start gap-2">
-                <span className="text-green-600 mt-0.5">✓</span>
+              <li className="flex items-start gap-3">
+                <span className="text-marty-orange font-bold mt-0.5">&#10003;</span>
                 <span>AI-matched to your resume and skills</span>
               </li>
             </ul>
           </div>
 
           {/* Email form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-2"
+                className="block text-sm font-medium text-marty-black mb-2"
               >
                 Email Address
               </label>
@@ -113,16 +113,16 @@ function CheckoutContent() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="you@example.com"
-                className="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-marty-orange focus:border-transparent transition-all duration-200"
                 disabled={isLoading}
               />
-              <p className="text-xs text-gray-500 mt-1">
-                We'll send 20 jobs to this email
+              <p className="text-xs text-gray-500 mt-2">
+                We'll send a copy of all your matches here
               </p>
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
                 {error}
               </div>
             )}
@@ -130,27 +130,38 @@ function CheckoutContent() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-md transition-colors duration-200"
+              className="w-full bg-marty-black hover:bg-marty-orange disabled:bg-gray-400 text-white font-semibold py-4 px-6 rounded-full transition-all duration-300"
             >
-              {isLoading ? 'Processing...' : 'Pay $5 & Find My Jobs →'}
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 bg-white rounded-full animate-bounce-loader" />
+                  Processing...
+                </span>
+              ) : (
+                'Pay $2.99 & Find My Jobs'
+              )}
             </button>
           </form>
 
           {/* Security badges */}
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <div className="flex items-center justify-center gap-4 text-xs text-gray-500">
-              <div className="flex items-center gap-1">
-                <span>🔒</span>
+          <div className="mt-8 pt-8 border-t border-gray-200">
+            <div className="flex items-center justify-center gap-6 text-sm text-gray-500">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
                 <span>Secure payment</span>
               </div>
-              <div className="flex items-center gap-1">
-                <span>🛡️</span>
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
                 <span>Powered by Stripe</span>
               </div>
             </div>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
@@ -158,8 +169,8 @@ function CheckoutContent() {
 export default function CheckoutPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="w-5 h-5 bg-marty-orange rounded-full animate-bounce-loader" />
       </div>
     }>
       <CheckoutContent />

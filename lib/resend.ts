@@ -26,7 +26,7 @@ function isValidEmail(email: string): boolean {
 }
 
 /**
- * Generate HTML email template for job listings
+ * Generate HTML email template for job listings - Marty Supreme Style
  */
 function generateJobEmailHTML(jobs: Job[]): string {
   return `
@@ -38,116 +38,124 @@ function generateJobEmailHTML(jobs: Job[]): string {
   <title>Your Job Matches</title>
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
       line-height: 1.6;
-      color: #333;
+      color: #111111;
       max-width: 600px;
       margin: 0 auto;
       padding: 20px;
-      background-color: #f5f5f5;
+      background-color: #ffffff;
+      -webkit-font-smoothing: antialiased;
     }
     .container {
       background-color: #ffffff;
-      border-radius: 8px;
-      padding: 30px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 0;
     }
     .header {
       text-align: center;
-      margin-bottom: 30px;
-      padding-bottom: 20px;
-      border-bottom: 2px solid #e5e7eb;
+      margin-bottom: 40px;
+      padding-bottom: 30px;
+      border-bottom: 2px solid #FF8100;
+    }
+    .logo {
+      color: #FF8100;
+      font-weight: 800;
+      font-size: 24px;
+      text-transform: uppercase;
+      letter-spacing: -0.02em;
+      margin-bottom: 24px;
     }
     .header h1 {
-      color: #2563eb;
-      margin: 0 0 10px 0;
-      font-size: 28px;
+      color: #111111;
+      margin: 0 0 8px 0;
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+    .header h1 span {
+      color: #FF8100;
     }
     .header p {
-      color: #6b7280;
+      color: #666666;
       margin: 0;
       font-size: 16px;
     }
     .job {
-      margin-bottom: 25px;
-      padding: 20px;
-      border: 1px solid #e5e7eb;
-      border-radius: 6px;
-      background-color: #f9fafb;
+      margin-bottom: 16px;
+      padding: 20px 24px;
+      border: 1px solid #e5e5e5;
+      border-radius: 12px;
+      background-color: #ffffff;
+    }
+    .job:hover {
+      border-color: #FF8100;
     }
     .job-title {
-      font-size: 18px;
+      font-size: 17px;
       font-weight: 600;
-      color: #111827;
-      margin: 0 0 10px 0;
+      color: #111111;
+      margin: 0 0 8px 0;
     }
-    .job-company {
-      color: #4b5563;
-      font-size: 15px;
-      margin: 5px 0;
-    }
-    .job-location {
-      color: #6b7280;
+    .job-meta {
+      color: #666666;
       font-size: 14px;
-      margin: 5px 0;
+      margin: 0 0 12px 0;
     }
     .job-salary {
-      color: #059669;
-      font-size: 14px;
-      font-weight: 500;
-      margin: 5px 0;
+      color: #FF8100;
+      font-weight: 600;
     }
     .apply-button {
       display: inline-block;
-      margin-top: 12px;
-      padding: 10px 20px;
-      background-color: #2563eb;
-      color: #ffffff;
+      padding: 12px 24px;
+      background-color: #111111;
+      color: #ffffff !important;
       text-decoration: none;
-      border-radius: 5px;
-      font-weight: 500;
+      border-radius: 50px;
+      font-weight: 600;
       font-size: 14px;
-    }
-    .apply-button:hover {
-      background-color: #1d4ed8;
     }
     .footer {
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 1px solid #e5e7eb;
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid #e5e5e5;
       text-align: center;
-      color: #6b7280;
-      font-size: 14px;
     }
-    .footer a {
-      color: #2563eb;
-      text-decoration: none;
+    .footer p {
+      color: #999999;
+      font-size: 13px;
+      margin: 8px 0;
+    }
+    .footer .brand {
+      color: #FF8100;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: -0.01em;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>🎯 Your Job Matches Are Ready!</h1>
-      <p>Here are all ${jobs.length} jobs matched to your resume</p>
+      <div class="logo">JobMatch</div>
+      <h1>Your <span>Matches</span> Are Ready</h1>
+      <p>${jobs.length} jobs matched to your skills</p>
     </div>
 
     ${jobs.map((job, index) => `
       <div class="job">
-        <h2 class="job-title">${index + 1}. ${escapeHtml(job.title)}</h2>
-        <p class="job-company">🏢 ${escapeHtml(job.company)}</p>
-        <p class="job-location">📍 ${escapeHtml(job.location)}</p>
-        ${job.salary ? `<p class="job-salary">💰 ${escapeHtml(job.salary)}</p>` : ''}
-        <a href="${escapeHtml(job.url)}" class="apply-button">Apply Now →</a>
+        <h2 class="job-title">${escapeHtml(job.title)}</h2>
+        <p class="job-meta">
+          ${escapeHtml(job.company)}${job.location ? ` &bull; ${escapeHtml(job.location)}` : ''}${job.salary ? ` &bull; <span class="job-salary">${escapeHtml(job.salary)}</span>` : ''}
+        </p>
+        <a href="${escapeHtml(job.url)}" class="apply-button">Apply Now</a>
       </div>
     `).join('')}
 
     <div class="footer">
       <p>Good luck with your job search!</p>
-      <p style="margin-top: 10px;">
-        <strong>JobMatch</strong> - Helping you find your next opportunity
-      </p>
-      <p style="margin-top: 15px; font-size: 12px; color: #9ca3af;">
+      <p class="brand">JobMatch</p>
+      <p style="font-size: 11px; color: #bbbbbb; margin-top: 16px;">
         You received this email because you used JobMatch to find job opportunities.
       </p>
     </div>
@@ -210,7 +218,7 @@ export async function sendJobEmail(
       const { data, error } = await resend.emails.send({
         from: 'JobMatch <jobs@doloresresearch.com>',
         to: [to],
-        subject: `Your JobMatch Results - ${jobs.length} Jobs Found 🎯`,
+        subject: `Your JobMatch Results - ${jobs.length} Jobs Found`,
         html: html,
       });
 

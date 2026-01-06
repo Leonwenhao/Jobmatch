@@ -55,23 +55,27 @@ function SuccessContent() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
-          <div className="text-4xl mb-4">❌</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+      <div className="min-h-screen bg-white flex items-center justify-center px-4">
+        <div className="max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+          <h1 className="text-3xl font-bold text-marty-black mb-4 tracking-tight">
             Something Went Wrong
           </h1>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <div className="space-y-3">
+          <p className="text-gray-500 mb-8">{error}</p>
+          <div className="space-y-4">
             <a
               href="/"
-              className="block w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors"
+              className="block w-full px-6 py-4 bg-marty-black hover:bg-marty-orange text-white font-semibold rounded-full transition-all duration-300"
             >
               Return Home
             </a>
             <a
               href="mailto:support@jobmatch.com"
-              className="block w-full px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-md transition-colors"
+              className="block w-full px-6 py-4 bg-marty-gray hover:bg-gray-200 text-marty-black font-medium rounded-full transition-colors"
             >
               Contact Support
             </a>
@@ -82,19 +86,23 @@ function SuccessContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
-        <div className="text-4xl mb-4">✅</div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">
+    <div className="min-h-screen bg-white flex items-center justify-center px-4">
+      <div className="max-w-md w-full text-center">
+        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h1 className="text-3xl font-bold text-marty-black mb-4 tracking-tight">
           Payment Successful!
         </h1>
-        <p className="text-gray-600 mb-6">
+        <p className="text-gray-500 mb-8">
           {isProcessing
-            ? "We're finding the perfect jobs for you..."
+            ? "Finding the perfect jobs for you..."
             : 'Redirecting to your results...'}
         </p>
         <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="w-5 h-5 bg-marty-orange rounded-full animate-bounce-loader" />
         </div>
       </div>
     </div>
@@ -104,8 +112,8 @@ function SuccessContent() {
 export default function SuccessPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="w-5 h-5 bg-marty-orange rounded-full animate-bounce-loader" />
       </div>
     }>
       <SuccessContent />
