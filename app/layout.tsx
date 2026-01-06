@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
+
+const GA_MEASUREMENT_ID = "G-KC2645Z5DF";
 
 export const metadata: Metadata = {
   title: "JobMatch - Upload Your Resume, Get 25 Matched Jobs",
@@ -31,6 +34,22 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      {GA_MEASUREMENT_ID && (
+        <>
+          <Script
+            src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+            strategy="afterInteractive"
+          />
+          <Script id="google-analytics" strategy="afterInteractive">
+            {`
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', '${GA_MEASUREMENT_ID}');
+            `}
+          </Script>
+        </>
+      )}
       <body className="antialiased min-h-screen flex flex-col">
         <Header />
         <main className="flex-1 pt-20">
